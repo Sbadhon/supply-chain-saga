@@ -1,6 +1,7 @@
 import { createReducer, on } from '@ngrx/store';
 import * as OrdersActions from './orders.actions';
 import { Order } from './order.model';
+import { upsert } from './order.utils';
 
 export interface OrdersState {
   orders: Order[];
@@ -75,5 +76,17 @@ export const ordersReducer = createReducer(
     ...state,
     loading: false,
     error,
-  }))
+  })),
+  on(OrdersActions.approveOrderSuccess, (state, { order }) => ({
+    ...state,
+    loading: false,
+    selectedOrder: order,
+    orders: upsert(state.orders, order),
+  })),
+  on(OrdersActions.cancelOrderSuccess, (state, { order }) => ({
+    ...state,
+    loading: false,
+    selectedOrder: order,
+    orders: upsert(state.orders, order),
+  })),
 );

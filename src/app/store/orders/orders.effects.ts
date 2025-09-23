@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { OrdersService } from './orders.service';
 import * as OrdersActions from './orders.actions';
-import { catchError, map, mergeMap, of } from 'rxjs';
+import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
 
 @Injectable()
 export class OrdersEffects {
@@ -50,4 +50,29 @@ export class OrdersEffects {
       )
     )
   );
+
+  approve$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(OrdersActions.approveOrder),
+      switchMap(({ id }) =>
+        this.ordersService.approveOrder(id).pipe(
+          map(order => OrdersActions.approveOrderSuccess({ order })),
+          catchError(err => of(OrdersActions.approveOrderFailure({ error: err?.error?.message ?? 'Approve failed' })))
+        )
+      )
+    )
+  );
+
+  cancel$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(OrdersActions.cancelOrder),
+      switchMap(({ id }) =>
+        this.ordersService.cancelOrder(id).pipe(
+          map(order => OrdersActions.cancelOrderSuccess({ order })),
+          catchError(err => of(OrdersActions.cancelOrderFailure({ error: err?.error?.message ?? 'Cancel failed' })))
+        )
+      )
+    )
+  );
+
 }

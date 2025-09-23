@@ -1,0 +1,119 @@
+<div class="container mt-4">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h2 class="m-0">Orders</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="currentStatus === 'ALL'"
+        (click)="filter('ALL')"
+      >
+        All
+      </button>
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="currentStatus === 'PENDING'"
+        (click)="filter('PENDING')"
+      >
+        Pending
+      </button>
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="currentStatus === 'RESERVED'"
+        (click)="filter('RESERVED')"
+      >
+        Reserved
+      </button>
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="currentStatus === 'PAID'"
+        (click)="filter('PAID')"
+      >
+        Paid
+      </button>
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="currentStatus === 'SHIPPED'"
+        (click)="filter('SHIPPED')"
+      >
+        Shipped
+      </button>
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="currentStatus === 'CANCELED'"
+        (click)="filter('CANCELED')"
+      >
+        Canceled
+      </button>
+
+      <input
+        class="form-control form-control-sm"
+        placeholder="Search id / customer / SKU"
+        (input)="onSearch($event)"
+        style="min-width: 260px"
+      />
+    </div>
+  </div>
+
+  @if (loading$ | async) {
+    <div class="text-center my-4">
+      <div class="spinner-border" role="status"></div>
+    </div>
+  }
+
+  @if (error$ | async; as error) {
+    <div class="alert alert-danger my-2">{{ error }}</div>
+  }
+
+  @if (filteredOrders$ | async; as orders) {
+    @if (orders.length > 0) {
+      <table class="table table-striped align-middle">
+        <thead class="table-light sticky-top">
+          <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Age</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders; track order.id) {
+            <tr [ngClass]="setRowClass(order)">
+              <td>
+                <a [routerLink]="['/orders', order.id]">#{{ order.id }}</a>
+              </td>
+              <td>{{ order.customerId || "—" }}</td>
+              <td>{{ order.items.length }}</td>
+              <td>{{ order.total| currency: "USD" }}</td>
+              <td>
+                <span class="badge" [ngClass]="statusClass(order.status)">{{
+                  order.status
+                }}</span>
+              </td>
+              <td>{{ order.createdAt | timeAgo }}</td>
+              <td>{{ order.createdAt | date: "short" }}</td>
+              <td>
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  (click)="openOrderById(order)"
+                >
+                  View
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="text-center text-muted py-5">
+        <div class="mb-2">No orders found.</div>
+        <button class="btn btn-sm btn-outline-primary" (click)="createSample()">
+          Create sample order
+        </button>
+      </div>
+    }
+  }
+</div>

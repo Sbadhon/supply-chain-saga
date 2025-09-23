@@ -9,13 +9,15 @@ import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { ordersReducer } from './store/orders/orders.reducers';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { OrdersEffects } from './store/orders/orders.effects';
+import { TraceIdInterceptor } from './core/interceptors/trace-id.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideHttpClient(),
+    provideHttpClient(withInterceptorsFromDi()),
+    // { provide: HTTP_INTERCEPTORS, useClass: TraceIdInterceptor, multi: true },
     provideRouter(routes),
     provideStore({
       orders: ordersReducer,
@@ -23,6 +25,6 @@ export const appConfig: ApplicationConfig = {
     provideEffects([
       OrdersEffects
     ]),
-    provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
+    provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() })
   ],
 };

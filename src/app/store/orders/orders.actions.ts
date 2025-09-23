@@ -42,3 +42,35 @@ export const loadOrderByIdFailure = createAction(
   '[Orders] Load Order By Id Failure',
   props<{ error: string }>()
 );
+
+
+export const approveOrder = createAction(
+  '[Orders] Approve Order By Id',
+  props<{ id: string }>()
+)
+
+export const approveOrderSuccess = createAction(
+  '[Orders] Approve Order By Id Success',
+  props<{ order: Order }>()
+);
+
+export const approveOrderFailure = createAction(
+  '[Orders] Approve Order By Id Failure',
+  props<{ error: string }>()
+);
+
+export const cancelOrder = createAction(
+  '[Orders] Cancel Order By Id',
+  props<{ id: string }>()
+)
+
+export const cancelOrderSuccess = createAction(
+  '[Orders] Cancel Order By Id Success',
+  props<{ order: Order }>()
+);
+
+export const cancelOrderFailure = createAction(
+  '[Orders] Cancel Order By Id Failure',
+  props<{ error: string }>()
+);
+
