@@ -14,14 +14,14 @@ import { OrdersService } from './orders.service';
 
 @Controller('v1/orders')
 export class OrdersController {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
   async create(
     @Body() dto: CreateOrderDto,
     @Headers('idempotency-key') idemKey?: string,
   ): Promise<OrderResponseDto> {
-    const order = await this.orders.create(dto, idemKey);
+    const order = await this.ordersService.create(dto, idemKey);
     return plainToInstance(OrderResponseDto, order, {
       excludeExtraneousValues: true,
     });
@@ -33,7 +33,7 @@ export class OrdersController {
 
   @Get()
   async getAll(): Promise<OrderResponseDto[]> {
-    const orders = await this.orders.getAll();
+    const orders = await this.ordersService.getAll();
     return plainToInstance(OrderResponseDto, orders, {
       excludeExtraneousValues: true,
     });
@@ -41,11 +41,23 @@ export class OrdersController {
 
   @Get(':id')
   async getById(@Param('id') id: string): Promise<OrderResponseDto> {
-    const order = await this.orders.getById(id);
+    const order = await this.ordersService.getById(id);
     if (!order) throw new NotFoundException('Order not found');
 
     return plainToInstance(OrderResponseDto, order, {
       excludeExtraneousValues: true,
     });
+  }
+
+  @Post(':id/approve')
+  async approve(@Param('id') id: string): Promise<OrderResponseDto> {
+    const order = await this.ordersService.approve(id);
+    return plainToInstance(OrderResponseDto, order, { excludeExtraneousValues: true });
+  }
+  
+  @Post(':id/cancel')
+  async cancel(@Param('id') id: string): Promise<OrderResponseDto> {
+    const order = await this.ordersService.cancel(id);
+    return plainToInstance(OrderResponseDto, order, { excludeExtraneousValues: true });
   }
 }

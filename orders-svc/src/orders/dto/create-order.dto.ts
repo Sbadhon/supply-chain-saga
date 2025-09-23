@@ -4,6 +4,7 @@ import {
   IsArray,
   IsInt,
   IsNotEmpty,
+  IsNumberString,
   IsOptional,
   IsString,
   Min,
@@ -11,9 +12,19 @@ import {
 } from 'class-validator';
 
 class ItemDto {
-  @IsString() @IsNotEmpty() sku: string;
-  @IsInt() @Min(1) quantity: number;
-  @IsString() unitPrice: string;
+  @IsString() 
+  @IsNotEmpty() 
+  sku: string;
+
+  @IsString() 
+  @IsOptional() 
+  supplierId: string;
+
+  @IsInt() 
+  @Min(1) quantity: number;
+
+  @IsNumberString() 
+  unitPrice: string;
 }
 export class CreateOrderDto {
   @IsString() @IsOptional() customerId?: string;

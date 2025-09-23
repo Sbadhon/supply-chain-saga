@@ -1,39 +1,61 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 
 class OrderItemResponseDto {
-  @Expose()
+  @Expose() 
   sku!: string;
 
-  @Expose()
+  @Expose() 
+  supplierId?: string;
+
+  @Expose() 
   quantity!: number;
 
   @Expose()
-  unitPrice!: string;
+  @Transform(({ value }) => Number(value))
+  unitPrice!: number;
+
+  @Expose()
+  get lineTotal(): number {
+    return Number(this.quantity) * Number(this.unitPrice);
+  }
 }
 
 export class OrderResponseDto {
-  @Expose()
+  @Expose() 
   id!: string;
 
-  @Expose()
-  customerId?: string;
+  @Expose() 
+  customerId?: string | null;
 
-  @Expose()
+  @Expose() 
   status!: string;
 
-  @Expose()
-  idempotencyKey!: string;
+  // @Expose() 
+  // idempotencyKey!: string;
 
-  @Expose()
+  @Expose() 
   metadata?: Record<string, any>;
 
   @Expose()
   @Type(() => OrderItemResponseDto)
   items!: OrderItemResponseDto[];
 
-  @Expose()
+  @Expose() 
   createdAt!: Date;
 
-  @Expose()
+  @Expose() 
   updatedAt!: Date;
+
+  @Expose()
+  get itemsCount(): number {
+    return this.items?.length ?? 0;
+  }
+
+  @Expose()
+  get total(): number {
+    return (this.items ?? []).reduce(
+      (sum, item: any) => sum + Number(item.quantity) * Number(item.unitPrice),
+      0,
+    );
+  }
 }
