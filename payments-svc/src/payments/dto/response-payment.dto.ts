@@ -5,23 +5,39 @@ export class PaymentResponseDto {
   id!: string;
 
   @Expose() 
-  order_id: number;
+  orderId!: string;
 
   @Expose() 
-  status: string;
+  status!: string;
 
   @Expose() 
-  amount: number;
+  amount!: number;
 
   @Expose() 
-  provider_ref: string;
-
-  // @Expose() 
-  // idempotencyKey!: string;
+  currency!: string;
 
   @Expose() 
-  createdAt!: Date;
+  authorizedAmount?: number;
 
   @Expose() 
-  updatedAt!: Date;
+  capturedAmount?: number;
+
+  @Expose() 
+  refundedAmount?: number;
+
+  @Expose() 
+  methodSummary?: string;
+
+  @Expose() 
+  provider?: string;
+
+  @Expose() 
+  provider_ref?: string;
+
+  @Expose() 
+  providerPaymentId?: string;
+
+  @Expose() createdAt!: Date;
+
+  @Expose() updatedAt!: Date;
 }
