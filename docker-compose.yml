@@ -33,5 +33,15 @@ services:
       - postgres
     ports:
       - "3002:3002"
+  payments-svc:
+    build: ./payments-svc
+    env_file:
+      - ./payments-svc/.env
+    depends_on:
+      - postgres
+      - redis
+      - nats
+    ports:
+      - "3003:3003"
 volumes:
   pgdata:
