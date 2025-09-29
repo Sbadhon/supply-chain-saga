@@ -11,6 +11,7 @@ import {
   import { PaymentsService } from './payments.service';
   import { CreatePaymentDto } from './dto/create-payment.dto';
   import { PaymentResponseDto } from './dto/response-payment.dto';
+  import { Payment } from './entities/payment.entity';
   
   @Controller('v1/payments')
   export class PaymentsController {
@@ -19,56 +20,66 @@ import {
     @Post()
     async create(
       @Body() dto: CreatePaymentDto,
-      @Headers('idempotency-key') idemKey?: string,
+      @Headers('idempotency-key') idemKeyLower?: string,
+      @Headers('x-idempotency-key') idemKeyXLower?: string,
+      @Headers('Idempotency-Key') idemKey?: string,
+      @Headers('X-Idempotency-Key') idemKeyX?: string,
     ): Promise<PaymentResponseDto> {
-      const payment = await this.paymentsService.create(dto, idemKey);
-      return plainToInstance(PaymentResponseDto, payment, {
-        excludeExtraneousValues: true,
-      });
+      const key = idemKeyLower || idemKeyXLower || idemKey || idemKeyX;
+      const payment = await this.paymentsService.create(dto, key);
+      return this.toResponse(payment);
     }
   
     @Get()
     async getAll(): Promise<PaymentResponseDto[]> {
       const payments = await this.paymentsService.getAll();
-      return plainToInstance(PaymentResponseDto, payments, {
-        excludeExtraneousValues: true,
-      });
+      return payments.map(p => this.toResponse(p));
     }
   
     @Get(':id')
     async getById(@Param('id') id: string): Promise<PaymentResponseDto> {
       const payment = await this.paymentsService.getById(id);
       if (!payment) throw new NotFoundException('Payment not found');
-  
-      return plainToInstance(PaymentResponseDto, payment, {
-        excludeExtraneousValues: true,
-      });
+      return this.toResponse(payment);
     }
   
-    // --- match frontend effects ---
-  
-    // GET /v1/payments/:id/events
     @Get(':id/events')
-    async getEvents(@Param('id') id: string) {
+    async events(@Param('id') id: string) {
       return this.paymentsService.getEvents(id);
     }
   
-    // POST /v1/payments/:id/retry
     @Post(':id/retry')
     async retry(@Param('id') id: string): Promise<PaymentResponseDto> {
-      const payment = await this.paymentsService.retry(id);
-      return plainToInstance(PaymentResponseDto, payment, {
-        excludeExtraneousValues: true,
-      });
+      const p = await this.paymentsService.retry(id);
+      return this.toResponse(p);
     }
   
-    // POST /v1/payments/:id/void
     @Post(':id/void')
     async voidAuth(@Param('id') id: string): Promise<PaymentResponseDto> {
-      const payment = await this.paymentsService.void(id);
-      return plainToInstance(PaymentResponseDto, payment, {
-        excludeExtraneousValues: true,
-      });
+      const p = await this.paymentsService.void(id);
+      return this.toResponse(p);
+    }
+  
+    private toResponse(payment: Payment): PaymentResponseDto {
+      return plainToInstance(
+        PaymentResponseDto,
+        {
+          id: payment.id,
+          orderId: payment.orderId,
+          amount: Number(payment.amount),
+          currency: payment.currency,
+          status: payment.status,
+          authorizedAmount: payment.authorizedAmount != null ? Number(payment.authorizedAmount) : null,
+          capturedAmount: payment.capturedAmount != null ? Number(payment.capturedAmount) : null,
+          refundedAmount: payment.refundedAmount != null ? Number(payment.refundedAmount) : null,
+          methodSummary: payment.methodSummary ?? null,
+          provider: payment.provider ?? null,
+          providerPaymentId: payment.providerPaymentId ?? null,
+          createdAt: payment.createdAt,
+          updatedAt: payment.updatedAt,
+        },
+        { excludeExtraneousValues: true },
+      );
     }
   }
   

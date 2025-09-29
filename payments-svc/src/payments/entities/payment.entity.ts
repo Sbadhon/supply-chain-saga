@@ -27,15 +27,10 @@ import {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
   
-    // camelCase in code, snake_case in DB
     @Column({ name: 'order_id', type: 'varchar', length: 64 })
     orderId!: string;
   
-    @Column({
-      type: 'enum',
-      enum: PaymentStatusEnum,
-      default: PaymentStatusEnum.NEW,
-    })
+    @Column({ type: 'enum', enum: PaymentStatusEnum, default: PaymentStatusEnum.NEW })
     status!: PaymentStatusEnum;
   
     @Column('numeric', { precision: 12, scale: 2 })
@@ -56,11 +51,8 @@ import {
     @Column({ type: 'varchar', length: 128, nullable: true, name: 'method_summary' })
     methodSummary?: string | null;
   
-    @Column({ type: 'varchar', length: 64, nullable: true })
+    @Column({ type: 'varchar', length: 32, nullable: true })
     provider?: string | null;
-  
-    @Column({ type: 'varchar', length: 128, nullable: true })
-    provider_ref?: string | null;
   
     @Column({ type: 'varchar', length: 128, nullable: true, name: 'provider_payment_id' })
     providerPaymentId?: string | null;

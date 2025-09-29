@@ -1,31 +1,28 @@
+
 import { IsNumber, IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
 
 export class CreatePaymentDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   orderId!: string;
 
   @IsNumber()
   amount!: number;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   currency!: string;
 
-  @IsOptional()
+  @IsOptional() @IsString()
+  methodSummary?: string;
+
+  @IsOptional() 
   @IsString()
   provider?: string;
 
-  @IsOptional()
-  @IsString()
-  provider_ref?: string;
+  @IsOptional() @IsString()
+  providerPaymentId?: string;
 
-  @IsOptional()
-  @IsString()
-  methodSummary?: string;
-
-  @IsOptional()
-  @IsString()
+  @IsOptional() 
+  @IsString() 
   @IsIn([
     'NEW','PROCESSING','REQUIRES_ACTION','AUTHORIZED','CAPTURED',
     'DECLINED','FAILED','VOIDED','REFUNDED','PARTIALLY_REFUNDED','DISPUTED','CANCELED'

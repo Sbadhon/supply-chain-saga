@@ -9,119 +9,97 @@ import {
   import { Payment, PaymentStatusEnum } from './entities/payment.entity';
   import { CreatePaymentDto } from './dto/create-payment.dto';
   
-  type TimelineEvent = {
+  type PaymentEventDto = {
     id: string;
     paymentId: string;
     type: string;
     status: PaymentStatusEnum;
     message?: string;
-    at: string; // ISO
+    at: string;
   };
   
   @Injectable()
   export class PaymentsService {
     constructor(
-      @InjectRepository(Payment)
-      private readonly repo: Repository<Payment>,
-      @InjectDataSource()
-      private readonly ds: DataSource,
+      @InjectRepository(Payment) private readonly repo: Repository<Payment>,
+      @InjectDataSource() private readonly ds: DataSource,
     ) {}
   
     async create(dto: CreatePaymentDto, idempotencyKey?: string): Promise<Payment> {
-      if (!idempotencyKey) {
-        throw new BadRequestException('Missing Idempotency-Key header');
-      }
+      if (!idempotencyKey) throw new BadRequestException('Missing Idempotency-Key header');
   
       try {
         const existing = await this.repo.findOne({ where: { idempotencyKey } });
         if (existing) return existing;
   
-        return await this.ds.transaction(async (trx) => {
-          const paymentRepo = trx.getRepository(Payment);
-  
-          const payment = paymentRepo.create({
+        return await this.ds.transaction(async trx => {
+          const r = trx.getRepository(Payment);
+          const p = r.create({
             orderId: dto.orderId,
             amount: dto.amount,
             currency: dto.currency,
             methodSummary: dto.methodSummary ?? null,
             provider: dto.provider ?? null,
-            provider_ref: dto.provider_ref ?? null,
-            status: (dto.status as PaymentStatusEnum) || PaymentStatusEnum.NEW,
+            providerPaymentId: dto.providerPaymentId ?? null,
+            status: (dto.status as PaymentStatusEnum) ?? PaymentStatusEnum.NEW,
             authorizedAmount: null,
             capturedAmount: null,
             refundedAmount: null,
             idempotencyKey,
           });
-  
-          const saved = await paymentRepo.save(payment);
-          return saved;
+          return await r.save(p);
         });
       } catch (err) {
-        if (err instanceof NotFoundException || err instanceof BadRequestException) throw err;
+        if (err instanceof BadRequestException || err instanceof NotFoundException) throw err;
         throw new InternalServerErrorException('Could not create payment');
       }
     }
   
-    async getAll(): Promise<Payment[]> {
+    getAll(): Promise<Payment[]> {
       return this.repo.find();
     }
   
     async getById(id: string): Promise<Payment | null> {
-      try {
-        return await this.repo.findOne({ where: { id } });
-      } catch (err) {
-        if (err instanceof NotFoundException || err instanceof BadRequestException) throw err;
-        throw new InternalServerErrorException('Could not find payment');
-      }
+      return this.repo.findOne({ where: { id } });
     }
   
-    async getEvents(paymentId: string): Promise<TimelineEvent[]> {
+    async getEvents(paymentId: string): Promise<PaymentEventDto[]> {
       const exists = await this.repo.findOne({ where: { id: paymentId } });
       if (!exists) throw new NotFoundException('Payment not found');
-  
-      //TO DO:  plug  outbox/events table here. For now, return a minimal synthetic timeline.
-      return [
-        {
-          id: `${paymentId}-created`,
-          paymentId,
-          type: 'payment.created',
-          status: exists.status,
-          message: 'Payment created',
-          at: exists.createdAt.toISOString(),
-        },
-      ];
+      //TO DO:  stub timeline; replace with outbox/events store
+      return [{
+        id: `${paymentId}-created`,
+        paymentId,
+        type: 'payment.created',
+        status: exists.status,
+        message: 'Payment created',
+        at: exists.createdAt.toISOString(),
+      }];
     }
-    
+  
     async retry(paymentId: string): Promise<Payment> {
-      const payment = await this.repo.findOne({ where: { id: paymentId } });
-      if (!payment) throw new NotFoundException('Payment not found');
+      const p = await this.repo.findOne({ where: { id: paymentId } });
+      if (!p) throw new NotFoundException('Payment not found');
   
-      if (this.isTerminal(payment.status)) {
-        return payment;
-      }
-  
-      payment.status = PaymentStatusEnum.PROCESSING;
-      payment.updatedAt = new Date();
-      return this.repo.save(payment);
+      if (this.isTerminal(p.status)) return p;
+      p.status = PaymentStatusEnum.PROCESSING;
+      p.updatedAt = new Date();
+      return this.repo.save(p);
     }
   
     async void(paymentId: string): Promise<Payment> {
-      const payment = await this.repo.findOne({ where: { id: paymentId } });
-      if (!payment) throw new NotFoundException('Payment not found');
+      const p = await this.repo.findOne({ where: { id: paymentId } });
+      if (!p) throw new NotFoundException('Payment not found');
   
-      if (
-        payment.status === PaymentStatusEnum.CAPTURED ||
-        payment.status === PaymentStatusEnum.REFUNDED
-      ) {
-        return payment;
+      if (p.status === PaymentStatusEnum.CAPTURED || p.status === PaymentStatusEnum.REFUNDED) {
+        return p;
       }
-  
-      payment.status = PaymentStatusEnum.VOIDED;
-      payment.updatedAt = new Date();
-      return this.repo.save(payment);
+      p.status = PaymentStatusEnum.VOIDED;
+      p.updatedAt = new Date();
+      return this.repo.save(p);
     }
   
-    private isTerminal(status: PaymentStatusEnum) {
+    private isTerminal(s: PaymentStatusEnum) {
       return [
         PaymentStatusEnum.CAPTURED,
         PaymentStatusEnum.REFUNDED,
@@ -130,7 +108,7 @@ import {
         PaymentStatusEnum.FAILED,
         PaymentStatusEnum.CANCELED,
         PaymentStatusEnum.DISPUTED,
-      ].includes(status);
+      ].includes(s);
     }
   }
   
