@@ -1,0 +1,97 @@
+<div class="container mt-4" *ngIf="(row$ | async) as row">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h3 class="m-0">Edit Inventory</h3>
+      <div class="d-flex gap-2">
+        <span class="d-flex align-items-center badge" [class]="statusBadgeClass(row)">
+          {{ out(row) ? 'Out' : (low(row) ? 'Low' : 'OK') }}
+        </span>
+        <button class="btn btn-sm btn-outline-secondary" (click)="cancel()">Back</button>
+      </div>
+    </div>
+    <ng-container *ngIf="(error$ | async) as err">
+      <div class="alert alert-danger my-2">{{ err }}</div>
+    </ng-container>
+    <ng-container *ngIf="(loading$ | async)">
+      <div class="text-center my-4"><div class="spinner-border" role="status"></div></div>
+    </ng-container>
+  
+    <div class="row g-3">
+      <div class="col-12 col-lg-4">
+        <div class="card">
+          <div class="card-body">
+            <h6 class="text-uppercase text-muted">Snapshot</h6>
+  
+            <div class="d-flex gap-4 my-2">
+              <div>
+                <div class="text-muted small">On Hand</div>
+                <div class="fw-bold">{{ row.available_qty }}</div>
+              </div>
+              <div>
+                <div class="text-muted small">Reserved</div>
+                <div class="fw-bold">{{ row.reserved_qty }}</div>
+              </div>
+              <div>
+                <div class="text-muted small">Available</div>
+                <div class="fw-bold">{{ available(row) }}</div>
+              </div>
+            </div>
+  
+            <div class="small text-muted">
+              Updated: {{ row.updatedAt | date:'short' }}
+            </div>
+  
+            <hr>
+  
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-sm btn-outline-success" (click)="receive(row.id)">Receive</button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="adjust(row.id)">Adjust</button>
+              <button class="btn btn-sm btn-outline-warning" (click)="move(row.id)">Move</button>
+              <button class="btn btn-sm btn-outline-dark" (click)="reserve(row.id)">Reserve</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-8">
+        <form [formGroup]="form" (ngSubmit)="save(row)" class="card">
+          <div class="card-body">
+            <h6 class="text-uppercase text-muted">Details</h6>
+  
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">SKU</label>
+                <input class="form-control" formControlName="sku" [disabled]="skuDisabled" />
+              </div>
+  
+              <div class="col-md-6">
+                <label class="form-label">Supplier</label>
+                <input class="form-control" formControlName="supplierId" placeholder="SUPP-123" />
+              </div>
+  
+              <div class="col-md-6">
+                <label class="form-label">Location</label>
+                <input class="form-control" formControlName="location" placeholder="WH-1/A-04/BIN-12" />
+              </div>
+  
+              <div class="col-md-3">
+                <label class="form-label">Reorder Point</label>
+                <input type="number" class="form-control" formControlName="reorderPoint" min="0" />
+              </div>
+  
+              <div class="col-md-3">
+                <label class="form-label">Inbound</label>
+                <input type="number" class="form-control" formControlName="inbound" min="0" />
+              </div>
+            </div>
+          </div>
+  
+          <div class="card-footer d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" (click)="cancel()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="form.invalid || !form.dirty">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  

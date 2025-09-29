@@ -1,2 +1,91 @@
-/* You can add global styles to this file, and also import other style files */
 @use "bootstrap/scss/bootstrap" as *;
+
+.btn-outline-primary {
+  --bs-btn-color: #155eef;
+  --bs-btn-border-color: #bcd3ff;
+
+  --bs-btn-hover-bg: #155eef;
+  --bs-btn-hover-border-color: #155eef;
+  --bs-btn-hover-color: #fff;
+
+  /* Active (for .active state on Orders filters) */
+  --bs-btn-active-bg: #155eef;
+  --bs-btn-active-border-color: #155eef;
+  --bs-btn-active-color: #fff;
+  --bs-btn-focus-shadow-rgb: 21, 94, 239; // rgb of #155eef
+}
+
+/* Outline Success */
+.btn-outline-success {
+  --bs-btn-color: #0f9d58;
+  --bs-btn-border-color: #c7efd8;
+
+  --bs-btn-hover-bg: #0f9d58;
+  --bs-btn-hover-border-color: #0f9d58;
+  --bs-btn-hover-color: #fff;
+
+  --bs-btn-active-bg: #0f9d58;
+  --bs-btn-active-border-color: #0f9d58;
+  --bs-btn-active-color: #fff;
+
+  --bs-btn-focus-shadow-rgb: 15, 157, 88; // rgb of #0f9d58
+}
+
+/* Outline Secondary */
+.btn-outline-secondary {
+  --bs-btn-color: #475467;
+  --bs-btn-border-color: #d0d5dd;
+
+  --bs-btn-hover-bg: #475467;
+  --bs-btn-hover-border-color: #475467;
+  --bs-btn-hover-color: #fff;
+
+  --bs-btn-active-bg: #475467;
+  --bs-btn-active-border-color: #475467;
+  --bs-btn-active-color: #fff;
+
+  --bs-btn-focus-shadow-rgb: 71, 84, 103; // rgb of #475467
+}
+
+/* Outline Warning */
+.btn-outline-warning {
+  --bs-btn-color: #b45309;
+  --bs-btn-border-color: #fde68a;
+
+  --bs-btn-hover-bg: #b45309;
+  --bs-btn-hover-border-color: #b45309;
+  --bs-btn-hover-color: #fff;
+
+  --bs-btn-active-bg: #b45309;
+  --bs-btn-active-border-color: #b45309;
+  --bs-btn-active-color: #fff;
+
+  --bs-btn-focus-shadow-rgb: 180, 83, 9; // rgb of #b45309
+}
+
+/* Outline Dark */
+.btn-outline-dark {
+  --bs-btn-color: #111827;
+  --bs-btn-border-color: #d1d5db;
+
+  --bs-btn-hover-bg: #111827;
+  --bs-btn-hover-border-color: #111827;
+  --bs-btn-hover-color: #fff;
+
+  --bs-btn-active-bg: #111827;
+  --bs-btn-active-border-color: #111827;
+  --bs-btn-active-color: #fff;
+
+  --bs-btn-focus-shadow-rgb: 17, 24, 39; // rgb of #111827
+}
+
+.btn-sm {
+  padding: .25rem .5rem;
+  line-height: 1.2;
+}
+
+.table > thead.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}

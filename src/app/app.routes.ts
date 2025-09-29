@@ -10,6 +10,13 @@ export const routes: Routes = [
     loadComponent: () => import('./orders/order-detail/order-detail.component').then(m => m.OrderDetailComponent) 
   },
   {
+    path: 'inventory',
+    loadComponent: () => import('./inventory/inventory-list/inventory-list.component').then(m => m.InventoryListComponent) 
+  },
+  { path: 'inventory/:id', 
+    loadComponent: () => import('./inventory/inventory-edit/inventory-edit.component').then(m => m.InventoryEditComponent) 
+  },
+  {
     path: '',
     redirectTo: 'orders',
     pathMatch: 'full',

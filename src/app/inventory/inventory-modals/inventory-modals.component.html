@@ -1,0 +1,175 @@
+<ng-container *ngIf="kind$ | async as kind">
+  <div
+    class="backdrop"
+    *ngIf="kind !== 'none'"
+    (click)="close()"
+    aria-hidden="true"
+  ></div>
+  <div
+    class="sheet"
+    *ngIf="kind !== 'none'"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title(kind)"
+  >
+    <div class="head">
+      <div class="title">{{ title(kind) }}</div>
+      <button type="button" class="icon" (click)="close()" aria-label="Close">
+        ✕
+      </button>
+    </div>
+    <ng-container *ngIf="row$ | async as row">
+      <form
+        *ngIf="kind === 'receive'"
+        (ngSubmit)="submitReceive(row)"
+        autocomplete="off"
+        novalidate
+      >
+        <div class="form-row">
+          <label for="qtyReceive">Quantity</label>
+          <input
+            id="qtyReceive"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="qty"
+            name="qtyReceive"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="source">Source (optional)</label>
+          <input
+            id="source"
+            type="text"
+            [(ngModel)]="source"
+            name="source"
+            placeholder="PO/ASN/etc."
+          />
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="close()">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="!(qty > 0)">
+            Receive
+          </button>
+        </div>
+      </form>
+      <form
+        *ngIf="kind === 'adjust'"
+        (ngSubmit)="submitAdjust(row)"
+        autocomplete="off"
+        novalidate
+      >
+        <div class="form-row">
+          <label for="delta">Delta (+/-)</label>
+          <input
+            id="delta"
+            type="number"
+            step="1"
+            [(ngModel)]="delta"
+            name="delta"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="reason">Reason</label>
+          <input
+            id="reason"
+            type="text"
+            [(ngModel)]="reason"
+            name="reason"
+            placeholder="cycle_count / damage / shrink"
+          />
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="close()">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="delta === 0">
+            Adjust
+          </button>
+        </div>
+      </form>
+      <form
+        *ngIf="kind === 'move'"
+        (ngSubmit)="submitMove(row)"
+        autocomplete="off"
+        novalidate
+      >
+        <div class="form-row">
+          <label for="qtyMove">Quantity</label>
+          <input
+            id="qtyMove"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="qty"
+            name="qtyMove"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="toLocation">To location</label>
+          <input
+            id="toLocation"
+            type="text"
+            [(ngModel)]="toLocation"
+            name="toLocation"
+            required
+            placeholder="e.g., WH-2/B-07/BIN-03"
+          />
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="close()">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="!(qty > 0 && toLocation.trim())"
+          >
+            Move
+          </button>
+        </div>
+      </form>
+      <form
+        *ngIf="kind === 'reserve'"
+        (ngSubmit)="submitReserve(row)"
+        autocomplete="off"
+        novalidate
+      >
+        <div class="form-row">
+          <label for="qtyReserve">Quantity</label>
+          <input
+            id="qtyReserve"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="qty"
+            name="qtyReserve"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="orderId">Order ID (optional)</label>
+          <input
+            id="orderId"
+            type="text"
+            [(ngModel)]="orderId"
+            name="orderId"
+          />
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="close()">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="!(qty > 0)">
+            Reserve
+          </button>
+        </div>
+      </form>
+    </ng-container>
+  </div>
+</ng-container>

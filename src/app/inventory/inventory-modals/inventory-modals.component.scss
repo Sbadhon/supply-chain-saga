@@ -1,0 +1,105 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.2);
+  backdrop-filter: saturate(120%) blur(2px);
+  z-index: 1040;
+}
+
+.sheet {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  bottom: 1rem;
+  width: 380px;
+  max-width: calc(100vw - 2rem);
+  background: #fff;
+  border: 1px solid #e6e8eb;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(16,24,40,.18);
+  padding: 1rem;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.icon {
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #475467;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+
+label {
+  font-size: 12px;
+  color: #475467;
+}
+
+input {
+  border: 1px solid #e6e8eb;
+  border-radius: 10px;
+  padding: .5rem .6rem;
+  font-size: 14px;
+}
+
+.actions {
+  margin-top: auto;
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary {
+  border-radius: 10px;
+  padding: .45rem .8rem;
+  border-width: 1px;
+}
+
+.btn-primary {
+  border-color: #155EEF;
+  background: #155EEF;
+  color: #fff;
+}
+
+.btn-secondary {
+  border-color: #e6e8eb;
+  background: #f8fafc;
+  color: #111827;
+}
+
+@media (max-width: 576px) {
+  .sheet {
+    right: 0;
+    left: 0;
+    width: auto;
+    border-radius: 0;
+    padding: .75rem;
+  }
+}

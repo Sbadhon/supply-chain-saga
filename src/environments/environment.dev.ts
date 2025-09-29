@@ -1,5 +1,6 @@
 export const environment = {
     production: false,
-    apiBaseUrl: 'http://localhost:3001'
+    order_svc: 'http://localhost:3001',
+    inventory_svc: 'http://localhost:3002',
 };
   
