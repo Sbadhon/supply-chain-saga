@@ -1,0 +1,164 @@
+<div class="container py-3">
+  <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    <div class="me-auto">
+      <h4 class="mb-0">Payments</h4>
+      <div class="text-muted small">Manage and inspect payment attempts</div>
+    </div>
+
+    <div class="input-group" style="max-width: 340px">
+      <span class="input-group-text">Search</span>
+      <input
+        class="form-control"
+        type="search"
+        placeholder="ID, Order, method, currency"
+        (input)="onSearchChange($any($event.target).value)"
+      />
+    </div>
+
+    <div class="input-group" style="width: 220px">
+      <span class="input-group-text">Status</span>
+      <select
+        class="form-select"
+        (change)="onStatusChange($any($event.target).value)"
+      >
+        <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+
+    <div class="input-group" style="width: 180px">
+      <span class="input-group-text">Per page</span>
+      <select
+        class="form-select"
+        [(ngModel)]="pageSizeValue"
+        (ngModelChange)="onPageSizeChange($event)"
+      >
+        <option [ngValue]="10">10</option>
+        <option [ngValue]="25">25</option>
+        <option [ngValue]="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <ng-container *ngIf="payments$ | async as payments">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th (click)="setSort('createdAt')" role="button">
+              Created
+              <span class="text-muted small" *ngIf="sortKey() === 'createdAt'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th (click)="setSort('orderId')" role="button">
+              Order
+              <span class="text-muted small" *ngIf="sortKey() === 'orderId'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th>Payment</th>
+            <th (click)="setSort('amount')" role="button" class="text-end">
+              Amount
+              <span class="text-muted small" *ngIf="sortKey() === 'amount'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th (click)="setSort('status')" role="button">
+              Status
+              <span class="text-muted small" *ngIf="sortKey() === 'status'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th>Method</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            *ngFor="let p of filteredSortedPaged(payments); trackBy: trackById"
+            [routerLink]="['/payments', p.id]"
+            class="table-row-link"
+          >
+            <td>{{ p.createdAt | date: "short" }}</td>
+            <td class="text-truncate" style="max-width: 180px">
+              <code>{{ p.orderId }}</code>
+            </td>
+            <td class="text-truncate" style="max-width: 280px">
+              <small class="text-muted">#{{ p.id }}</small>
+            </td>
+            <td class="text-end">
+              {{ p.currency }} {{ p.amount | number: "1.2-2" }}
+            </td>
+            <td>
+              <span
+                class="badge px-2 py-1"
+                [ngClass]="{
+                  'bg-secondary':
+                    p.status === 'NEW' ||
+                    p.status === 'CANCELED' ||
+                    p.status === 'VOIDED',
+                  'bg-info':
+                    p.status === 'PROCESSING' ||
+                    p.status === 'PARTIALLY_REFUNDED',
+                  'bg-warning text-dark': p.status === 'REQUIRES_ACTION',
+                  'bg-primary': p.status === 'AUTHORIZED',
+                  'bg-success':
+                    p.status === 'CAPTURED' || p.status === 'REFUNDED',
+                  'bg-danger': p.status === 'FAILED' || p.status === 'DECLINED',
+                  'bg-dark': p.status === 'DISPUTED',
+                }"
+                >{{ p.status }}</span
+              >
+            </td>
+            <td class="text-truncate" style="max-width: 220px">
+              {{ p.methodSummary || "—" }}
+            </td>
+            <td class="text-end">
+              <a
+                [routerLink]="['/payments', p.id]"
+                class="btn btn-sm btn-outline-primary"
+                >View</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center mt-2">
+      <div class="text-muted small">
+        Page {{ page() }} / {{ pageCount(payments) }} · Total
+        {{ totalAfterFilter(payments) }}
+      </div>
+      <div class="btn-group">
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="prevPage()"
+          [disabled]="page() === 1"
+        >
+          Prev
+        </button>
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="nextPage(payments)"
+          [disabled]="page() >= pageCount(payments)"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+    <div
+      *ngIf="!totalAfterFilter(payments)"
+      class="text-center text-muted py-5"
+    >
+      No payments match your filters.
+    </div>
+  </ng-container>
+
+  <div *ngIf="loading$ | async" class="text-muted small mt-2">Loading…</div>
+  <div *ngIf="error$ | async as err" class="text-danger small mt-2">
+    Error: {{ err }}
+  </div>
+</div>

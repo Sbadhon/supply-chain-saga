@@ -3,7 +3,7 @@ import {
   provideZoneChangeDetection,
   isDevMode,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { provideState, provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
@@ -14,20 +14,24 @@ import { OrdersEffects } from './store/orders/orders.effects';
 import { TraceIdInterceptor } from './core/interceptors/trace-id.interceptor';
 import { InventoryEffects } from './store/inventory/api/inventory.api.effects';
 import { inventoryFeature } from './store/inventory/state/inventory.feature';
+import { PaymentEffects } from './store/payment/payment.effects';
+import { paymentsReducer } from './store/payment/payment.reducers';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideHttpClient(withInterceptorsFromDi()),
     // { provide: HTTP_INTERCEPTORS, useClass: TraceIdInterceptor, multi: true },
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideStore({
       orders: ordersReducer,
+      payments: paymentsReducer
     }),
     provideState(inventoryFeature),
     provideEffects([
       OrdersEffects,
-      InventoryEffects
+      InventoryEffects,
+      PaymentEffects
     ]),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() })
   ],

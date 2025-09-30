@@ -1,0 +1,103 @@
+<div class="container py-3" *ngIf="payment$ | async as p; else loading">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h4 class="mb-1">Payment <span class="text-muted">#{{ p.id }}</span></h4>
+      <div class="small text-muted">
+        Order <strong>{{ p.orderId }}</strong> · {{ p.currency }} {{ p.amount | number:'1.2-2' }}
+      </div>
+    </div>
+
+    <span class="badge px-3 py-2"
+          [ngClass]="{
+            'bg-secondary': p.status==='NEW' || p.status==='CANCELED' || p.status==='VOIDED',
+            'bg-info': p.status==='PROCESSING' || p.status==='PARTIALLY_REFUNDED',
+            'bg-warning text-dark': p.status==='REQUIRES_ACTION',
+            'bg-primary': p.status==='AUTHORIZED',
+            'bg-success': p.status==='CAPTURED' || p.status==='REFUNDED',
+            'bg-danger': p.status==='FAILED' || p.status==='DECLINED',
+            'bg-dark': p.status==='DISPUTED'
+          }">
+      {{ p.status }}
+    </span>
+  </div>
+
+  <div class="progress mb-3" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-bar" [style.width.%]="
+      p.status==='NEW' ? 10 :
+      p.status==='PROCESSING' ? 35 :
+      p.status==='REQUIRES_ACTION' ? 60 :
+      p.status==='AUTHORIZED' ? 75 : 100"></div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="fw-semibold">Authorized</div>
+          <div class="display-6">{{ (p.authorizedAmount ?? 0) | number:'1.2-2' }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="fw-semibold">Captured</div>
+          <div class="display-6">{{ (p.capturedAmount ?? 0) | number:'1.2-2' }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="fw-semibold">Refunded</div>
+          <div class="display-6">{{ (p.refundedAmount ?? 0) | number:'1.2-2' }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="fw-semibold">Method</div>
+          <div>{{ p.methodSummary || '—' }}</div>
+          <div class="small text-muted">Updated {{ p.updatedAt | date:'short' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-3">
+    <button class="btn btn-sm btn-outline-primary"
+            (click)="onRetry()"
+            [disabled]="['CAPTURED','REFUNDED','VOIDED','CANCELED'].includes(p.status)">
+      Retry
+    </button>
+    <button class="btn btn-sm btn-outline-danger"
+            (click)="onCancel()"
+            [disabled]="['CAPTURED','REFUNDED','VOIDED','FAILED','CANCELED'].includes(p.status)">
+      Cancel / Void
+    </button>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-header">Timeline</div>
+    <div class="list-group list-group-flush" *ngIf="events$ | async as evts; else noevts">
+      <div class="list-group-item" *ngFor="let e of evts">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold">{{ e.type }}</div>
+            <div class="small text-muted">{{ e.message || '—' }}</div>
+          </div>
+          <span class="badge bg-light text-dark">{{ e.at | date:'short' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #loading>
+  <div class="text-center text-muted py-5">Loading payment…</div>
+</ng-template>
+
+<ng-template #noevts>
+  <div class="p-3 text-muted">No events yet.</div>
+</ng-template>
