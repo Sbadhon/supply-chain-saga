@@ -16,6 +16,8 @@ import { InventoryEffects } from './store/inventory/api/inventory.api.effects';
 import { inventoryFeature } from './store/inventory/state/inventory.feature';
 import { PaymentEffects } from './store/payment/payment.effects';
 import { paymentsReducer } from './store/payment/payment.reducers';
+import { ShippingEffects } from './store/shipping/shipping.effects';
+import { shipmentsReducer } from './store/shipping/shipping.reducers';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,13 +27,15 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideStore({
       orders: ordersReducer,
-      payments: paymentsReducer
+      payments: paymentsReducer,
+      shipments: shipmentsReducer
     }),
     provideState(inventoryFeature),
     provideEffects([
       OrdersEffects,
       InventoryEffects,
-      PaymentEffects
+      PaymentEffects,
+      ShippingEffects
     ]),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() })
   ],

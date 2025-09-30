@@ -1,0 +1,65 @@
+<div class="container py-3" *ngIf="shipment$ | async as s; else loading">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h4 class="mb-1">
+        Shipment <span class="text-muted">#{{ s.id }}</span>
+      </h4>
+      <div class="small text-muted">
+        Order <strong>{{ s.order_id }}</strong> · Created
+        {{ s.createdAt | date: "short" }}
+      </div>
+    </div>
+    <span
+      class="badge px-3 py-2"
+      [ngClass]="{
+        'bg-secondary': s.status === 'PENDING',
+        'bg-info': s.status === 'LABEL_CREATED',
+        'bg-primary': s.status === 'SHIPPED',
+        'bg-success': s.status === 'DELIVERED',
+        'bg-danger': s.status === 'FAILED' || s.status === 'CANCELED',
+      }"
+      >{{ s.status }}</span
+    >
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body d-flex flex-wrap gap-4">
+      <div>
+        <div class="fw-semibold">Label</div>
+        <div>
+          <a
+            *ngIf="s.label_url"
+            [href]="s.label_url"
+            target="_blank"
+            rel="noopener"
+            >Open label</a
+          >
+          <span *ngIf="!s.label_url" class="text-muted">—</span>
+        </div>
+      </div>
+      <div>
+        <div class="fw-semibold">Updated</div>
+        <div>{{ s.updatedAt | date: "short" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button
+      class="btn btn-sm btn-outline-danger"
+      (click)="cancel(s.id)"
+      [disabled]="
+        s.status === 'DELIVERED' ||
+        s.status === 'CANCELED' ||
+        s.status === 'FAILED'
+      "
+    >
+      Cancel Shipment
+    </button>
+    <a routerLink="/shipments" class="btn btn-sm btn-outline-secondary">Back</a>
+  </div>
+</div>
+
+<ng-template #loading>
+  <div class="text-center text-muted py-5">Loading shipment…</div>
+</ng-template>

@@ -1,0 +1,158 @@
+<div class="container py-3">
+  <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    <div class="me-auto">
+      <h4 class="mb-0">Shipments</h4>
+      <div class="text-muted small">Track and manage shipment labels</div>
+    </div>
+
+    <div class="input-group" style="max-width: 340px">
+      <span class="input-group-text">Search</span>
+      <input
+        #q
+        class="form-control"
+        type="search"
+        placeholder="ID, Order, status"
+        (input)="onSearchChange(q.value)">
+    </div>
+
+    <div class="input-group" style="width: 220px">
+      <span class="input-group-text">Status</span>
+      <select
+        class="form-select"
+        [ngModel]="status"
+        (ngModelChange)="onStatusChange($event)"
+      >
+        <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+
+    <div class="input-group" style="width: 180px">
+      <span class="input-group-text">Per page</span>
+      <select
+        class="form-select"
+        [(ngModel)]="pageSize"
+        (ngModelChange)="page = 1"
+      >
+        <option [ngValue]="10">10</option>
+        <option [ngValue]="25">25</option>
+        <option [ngValue]="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <ng-container *ngIf="shipments$ | async as shipments">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th role="button" (click)="setSort('createdAt')">
+              Created
+              <span class="text-muted small" *ngIf="sortKey === 'createdAt'"
+                >({{ sortDir }})</span
+              >
+            </th>
+            <th role="button" (click)="setSort('order_id')">
+              Order
+              <span class="text-muted small" *ngIf="sortKey === 'order_id'"
+                >({{ sortDir }})</span
+              >
+            </th>
+            <th>Shipment</th>
+            <th role="button" (click)="setSort('status')">
+              Status
+              <span class="text-muted small" *ngIf="sortKey === 'status'"
+                >({{ sortDir }})</span
+              >
+            </th>
+            <th>Label</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            *ngFor="let s of filteredSortedPaged(shipments); trackBy: trackById"
+          >
+            <td>{{ s.createdAt | date: "short" }}</td>
+            <td>
+              <code>{{ s.order_id }}</code>
+            </td>
+            <td class="text-truncate" style="max-width: 280px">
+              <small class="text-muted">#{{ s.id }}</small>
+            </td>
+            <td>
+              <span
+                class="badge px-2 py-1"
+                [ngClass]="{
+                  'bg-secondary': s.status === 'PENDING',
+                  'bg-info': s.status === 'LABEL_CREATED',
+                  'bg-primary': s.status === 'SHIPPED',
+                  'bg-success': s.status === 'DELIVERED',
+                  'bg-danger': s.status === 'FAILED' || s.status === 'CANCELED',
+                }"
+                >{{ s.status }}</span
+              >
+            </td>
+            <td class="text-truncate" style="max-width: 260px">
+              <a
+                *ngIf="s.label_url"
+                [href]="s.label_url"
+                target="_blank"
+                rel="noopener"
+                >Label</a
+              >
+              <span *ngIf="!s.label_url" class="text-muted">—</span>
+            </td>
+            <td class="text-end">
+              <a
+                [routerLink]="['/shipments', s.id]"
+                class="btn btn-sm btn-outline-primary"
+                >View</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center mt-2">
+      <div class="text-muted small">
+        Page {{ page }} / {{ pageCount(shipments) }} · Total
+        {{ countAfterFilter(shipments) }}
+      </div>
+      <div class="btn-group">
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="prevPage()"
+          [disabled]="page === 1"
+        >
+          Prev
+        </button>
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="nextPage(shipments)"
+          [disabled]="page >= pageCount(shipments)"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div
+      *ngIf="!countAfterFilter(shipments)"
+      class="text-center text-muted py-5"
+    >
+      No shipments match your filters.
+    </div>
+  </ng-container>
+
+  <div *ngIf="loading$ | async" class="text-center my-4">
+    <div class="spinner-border" role="status"></div>
+  </div>
+
+  <div *ngIf="error$ | async as error" class="alert alert-danger my-2">
+    {{ error }}
+  </div>
+</div>

@@ -42,6 +42,16 @@ export const routes: Routes = [
         .then(m => m.PaymentStatusComponent)
   },
   {
+    path: 'shipments',
+    loadComponent: () => import('./shipping/shipping-list/shipping-list.component')
+      .then(m => m.ShippingListComponent),
+  },
+  {
+    path: 'shipments/:id',
+    loadComponent: () => import('./shipping/shipping-detail/shipping-detail.component')
+      .then(m => m.ShippingDetailComponent),
+  },
+  {
     path: '',
     redirectTo: 'orders',
     pathMatch: 'full',
