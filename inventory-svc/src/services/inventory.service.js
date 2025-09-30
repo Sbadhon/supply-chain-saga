@@ -1,6 +1,6 @@
 import { tx } from '../db.js';
 import * as Inv from '../models/inventory.model.js';
-import { listByInventoryId, add as addEvent } from '../models/inventory-events.model.js'; // ✅ events helpers
+import { listByInventoryId, add as addEvent } from '../models/inventory-events.model.js'; 
 import { HttpError } from '../http.js';
 
 /* ======================

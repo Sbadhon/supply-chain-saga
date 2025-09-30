@@ -43,5 +43,15 @@ services:
       - nats
     ports:
       - "3003:3003"
+  shipping-svc:
+    build: ./shipping-svc
+    env_file:
+      - ./shipping-svc/.env
+      - ./shipping-svc/.env.docker
+    depends_on:
+      - postgres
+    ports:
+      - "3004:3004"
+
 volumes:
   pgdata:
