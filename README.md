@@ -1,64 +1,63 @@
-##Supply Chain Saga — Microservices Demo 
+# Supply Chain Saga — Microservices Demo
 
 A full-stack **supply chain management system** built as a distributed microservices architecture.  
-
 It showcases **event-driven design, idempotency, trace IDs, and polyglot services** (NestJS + Express).
 
 Designed as a **portfolio-ready project** to demonstrate production patterns like reliability, traceability, and consistency.
 
---------------------------------------------------------------------------------------
+---
 
-##Services
+## Services
 
-| Service       | Tech          | Purpose                                          |
-|---------------|--------------|--------------------------------------------------|
-| [orders-svc](./orders-svc/README.md)   | NestJS + TypeORM | Create/approve/cancel orders (idempotent writes) |
-| [payments-svc](./payments-svc/README.md) | NestJS + TypeORM | Process payments with retry/void + timeline       |
-| [inventory-svc](./inventory-svc/README.md) | Express + PG     | Reserve/commit/release/move stock across SKUs     |
-| [shipping-svc](./shipping-svc/README.md) | Express + PG     | Create & cancel shipments; event-sourcing-lite    |
-| [gateway](./gateway/README.md)         | NestJS           | Public API edge; forwards to services (NATS/HTTP) |
+| Service       | Tech              | Purpose                                          |
+|---------------|-------------------|--------------------------------------------------|
+| [orders-svc](./orders-svc/README.md)     | NestJS + TypeORM   | Create/approve/cancel orders (idempotent writes) |
+| [payments-svc](./payments-svc/README.md) | NestJS + TypeORM   | Process payments with retry/void + timeline       |
+| [inventory-svc](./inventory-svc/README.md) | Express + Postgres | Reserve/commit/release/move stock across SKUs     |
+| [shipping-svc](./shipping-svc/README.md) | Express + Postgres | Create & cancel shipments; event-sourcing-lite    |
+| [gateway](./gateway/README.md)           | NestJS             | Public API edge; forwards to services (NATS/HTTP) |
 
---------------------------------------------------------------------------------------
+---
 
-##Architecture
+## Architecture
 
 ```mermaid
 flowchart TD
-    A[Frontend (Angular+NgRx)] -->|HTTP| GW[API Gateway (NestJS)]
+  A[Frontend (Angular + NgRx)] -->|HTTP| GW[API Gateway (NestJS)]
 
-    subgraph Gateway
-        GWN[NATS Client] --> ORD
-        GWN --> PAY
-        GWH[Axios Client] --> INV
-        GWH --> SHIP
-    end
+  subgraph GW[Gateway]
+    GWN[NATS Client] --> ORD
+    GWN --> PAY
+    GWH[Axios Client] --> INV
+    GWH --> SHIP
+  end
 
-    subgraph ORD[orders-svc (NestJS)]
-        ORD --> ORDDB[(Postgres)]
-    end
+  subgraph ORD[orders-svc (NestJS)]
+    ORDDB[(Postgres)]
+  end
 
-    subgraph PAY[payments-svc (NestJS)]
-        PAY --> PAYDB[(Postgres)]
-    end
+  subgraph PAY[payments-svc (NestJS)]
+    PAYDB[(Postgres)]
+  end
 
-    subgraph INV[inventory-svc (Express)]
-        INV --> INVDB[(Postgres)]
-    end
+  subgraph INV[inventory-svc (Express)]
+    INVDB[(Postgres)]
+  end
 
-    subgraph SHIP[shipping-svc (Express)]
-        SHIP --> SHIPDB[(Postgres)]
-    end
+  subgraph SHIP[shipping-svc (Express)]
+    SHIPDB[(Postgres)]
+  end
 
-    GW -->|traceId + idempotency-key| ORD
-    GW -->|traceId + idempotency-key| PAY
-    GW -->|traceId + idempotency-key| INV
-    GW -->|traceId + idempotency-key| SHIP
+  GW -->|traceId + idempotency-key| ORD
+  GW -->|traceId + idempotency-key| PAY
+  GW -->|traceId + idempotency-key| INV
+  GW -->|traceId + idempotency-key| SHIP
 
-    ORD -->|events (future)| PAY
-    ORD -->|events (future)| INV
-    ORD -->|events (future)| SHIP
+  ORD -->|events (future)| PAY
+  ORD -->|events (future)| INV
+  ORD -->|events (future)| SHIP
+
 ```
-
 
 ##Features
 Distributed tracing — every request carries a traceId across services, returned via X-Trace-Id.
