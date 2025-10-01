@@ -21,7 +21,42 @@ Designed as a **portfolio-ready project** to demonstrate production patterns lik
 
 ## Architecture
 
-<pre> ```mermaid flowchart TD A[Frontend (Angular+NgRx)] -->|HTTP| GW[API Gateway (NestJS)] subgraph Gateway GWN[NATS Client] --> ORD_SVC GWN --> PAY_SVC GWH[Axios Client] --> INV_SVC GWH --> SHIP_SVC end subgraph OrdersService[orders-svc (NestJS)] ORD_SVC[orders-svc] --> ORDDB[(Postgres)] end subgraph PaymentsService[payments-svc (NestJS)] PAY_SVC[payments-svc] --> PAYDB[(Postgres)] end subgraph InventoryService[inventory-svc (Express)] INV_SVC[inventory-svc] --> INVDB[(Postgres)] end subgraph ShippingService[shipping-svc (Express)] SHIP_SVC[shipping-svc] --> SHIPDB[(Postgres)] end GW -->|traceId + idempotency-key| ORD_SVC GW -->|traceId + idempotency-key| PAY_SVC GW -->|traceId + idempotency-key| INV_SVC GW -->|traceId + idempotency-key| SHIP_SVC ORD_SVC -->|events (future)| PAY_SVC ORD_SVC -->|events (future)| INV_SVC ORD_SVC -->|events (future)| SHIP_SVC ``` </pre>
+```mermaid
+flowchart TD
+  A[Frontend Angular + NgRx] -->|HTTP| GW[API Gateway - NestJS]
+
+  subgraph GW[Gateway]
+    GWN[NATS Client] --> ORD
+    GWN --> PAY
+    GWH[Axios Client] --> INV
+    GWH --> SHIP
+  end
+
+  subgraph ORD[orders-svc - NestJS]
+    ORDDB[(Postgres)]
+  end
+
+  subgraph PAY[payments-svc - NestJS]
+    PAYDB[(Postgres)]
+  end
+
+  subgraph INV[inventory-svc - Express]
+    INVDB[(Postgres)]
+  end
+
+  subgraph SHIP[shipping-svc - Express]
+    SHIPDB[(Postgres)]
+  end
+
+  GW -->|traceId + idempotency-key| ORD
+  GW -->|traceId + idempotency-key| PAY
+  GW -->|traceId + idempotency-key| INV
+  GW -->|traceId + idempotency-key| SHIP
+
+  ORD -->|events future| PAY
+  ORD -->|events future| INV
+  ORD -->|events future| SHIP
+```
 
 ##Features
 Distributed tracing — every request carries a traceId across services, returned via X-Trace-Id.
