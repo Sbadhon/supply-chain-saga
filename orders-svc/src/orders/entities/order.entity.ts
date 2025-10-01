@@ -18,7 +18,7 @@ export class Order {
   @Column({ type: 'varchar', nullable: true })
   customerId?: string | null;
 
-  @Index()
+  @Index({ unique: true })
   @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
   idempotencyKey?: string | null;
 

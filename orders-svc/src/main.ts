@@ -1,27 +1,51 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
-import { ConfigService } from '@nestjs/config';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { TraceIdInterceptor } from './common/trace-id.interceptor';
 import { LoggingInterceptor } from './common/logging.interceptor';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { logger: ['log','error','warn'] });
-  app.use(helmet());
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useGlobalInterceptors(new TraceIdInterceptor(), new LoggingInterceptor());
-  app.enableCors({
+  const http = await NestFactory.create(AppModule, {
+    logger: ['log', 'error', 'warn'],
+  });
+  http.use(helmet());
+  http.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  http.useGlobalInterceptors(
+    new ClassSerializerInterceptor(http.get(Reflector)),
+    new TraceIdInterceptor(),
+    new LoggingInterceptor(),
+  );
+  http.enableCors({
     origin: ['http://localhost:4200'],
-    allowedHeaders: ['Content-Type','Authorization','Idempotency-Key'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'X-Trace-Id',
+    ],
+    exposedHeaders: ['X-Trace-Id'],
     credentials: true,
   });
-  const configService = app.get(ConfigService);
-  const port = Number(process.env.PORT || configService.get('PORT') || 3001);
-  await app.listen(port);
-  console.log(`orders-svc listening on :${port}`);
+
+  http.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.NATS,
+    options: { servers: [process.env.NATS_URL || 'nats://localhost:4222'] },
+  });
+
+  await http.startAllMicroservices();
+  const config = http.get(ConfigService);
+  const port = Number(process.env.PORT || config.get('PORT') || 3001);
+  await http.listen(port);
+
+  console.log(`orders-svc HTTP listening on :${port}`);
+  console.log(
+    `orders-svc NATS connected → ${process.env.NATS_URL || 'nats://localhost:4222'}`,
+  );
 }
+
 bootstrap();
