@@ -18,10 +18,10 @@ export class Order {
   @Column({ type: 'varchar', nullable: true })
   customerId?: string | null;
 
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
-  idempotencyKey?: string | null;
-
+  @Column({ type: 'varchar', length: 64, name: 'idempotency_key', nullable: false })
+  @Index('uq_payments_idempotency_key', { unique: true })
+  idempotencyKey!: string;
+  
   @Column({ type: 'jsonb', nullable: true })
   metadata?: any;
 
