@@ -6,7 +6,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 @Controller()
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class OrdersMessageController {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) {}
 
   @MessagePattern({ cmd: 'orders.create' })
   async create(
@@ -19,14 +19,21 @@ export class OrdersMessageController {
   ) {
     const { dto, traceId, idempotencyKey } = data;
     console.log(`[traceId=${traceId}] orders.create`);
-    return this.orders.create(dto, idempotencyKey);
+    return this.ordersService.create(dto, idempotencyKey);
+  }
+
+  @MessagePattern({ cmd: 'orders.getAll' })
+  async getAll(@Payload() data: { traceId: string }) {
+    const { traceId } = data;
+    console.log(`[traceId=${traceId}] orders.getAll`);
+    return this.ordersService.getAll();
   }
 
   @MessagePattern({ cmd: 'orders.getById' })
   async getById(@Payload() data: { id: string; traceId: string }) {
     const { id, traceId } = data;
     console.log(`[traceId=${traceId}] orders.getById ${id}`);
-    return this.orders.getById(id);
+    return this.ordersService.getById(id);
   }
 
   @MessagePattern({ cmd: 'orders.approve' })
@@ -34,7 +41,7 @@ export class OrdersMessageController {
     @Payload() data: { id: string; traceId: string; idempotencyKey?: string },
   ) {
     const { id } = data;
-    return this.orders.approve(id);
+    return this.ordersService.approve(id);
   }
 
   @MessagePattern({ cmd: 'orders.cancel' })
@@ -42,6 +49,6 @@ export class OrdersMessageController {
     @Payload() data: { id: string; traceId: string; idempotencyKey?: string },
   ) {
     const { id } = data;
-    return this.orders.cancel(id);
+    return this.ordersService.cancel(id);
   }
 }

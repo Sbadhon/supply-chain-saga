@@ -37,9 +37,7 @@ export class PaymentsMessageController {
   }
 
   @MessagePattern({ cmd: 'payments.getEvents' })
-  async getEvents(
-    @Payload() data: { id: string; traceId: string; idempotencyKey?: string },
-  ) {
+  async getEvents(@Payload() data: { id: string; traceId: string }) {
     const { id } = data;
     return this.paymentsService.getEvents(id);
   }
