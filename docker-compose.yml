@@ -1,57 +1,117 @@
+version: "3.9"
+
 services:
+  # --- Infra ---
   postgres:
     image: postgres:16
     environment:
       POSTGRES_DB: supply-chain-saga-db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports: ["5434:5432"]
+    ports: ["5434:5432"]     # host:container
     volumes:
       - pgdata:/var/lib/postgresql/data
+
   redis:
     image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
     ports: ["6379:6379"]
+
   nats:
     image: nats:2
     ports: ["4222:4222"]
+
+  # --- Services ---
   orders-svc:
     build: ./orders-svc
     env_file:
       - ./orders-svc/.env
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3001
     depends_on:
       - postgres
       - redis
       - nats
     ports:
       - "3001:3001"
+
   inventory-svc:
     build: ./inventory-svc
     env_file:
       - ./inventory-svc/.env
-      - ./inventory-svc/.env.docker   # ensures DB_HOST=postgres in container
+      - ./inventory-svc/.env.docker
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3002
     depends_on:
       - postgres
+      - redis
     ports:
       - "3002:3002"
+
   payments-svc:
     build: ./payments-svc
     env_file:
       - ./payments-svc/.env
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3003
     depends_on:
       - postgres
       - redis
       - nats
     ports:
       - "3003:3003"
+
   shipping-svc:
     build: ./shipping-svc
     env_file:
       - ./shipping-svc/.env
       - ./shipping-svc/.env.docker
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3004
     depends_on:
       - postgres
+      - redis
     ports:
       - "3004:3004"
+
+  # --- Gateway (HTTP entrypoint) ---
+  gateway:
+    build: ./gateway
+    environment:
+      PORT: 3000
+      NATS_URL: nats://nats:4222
+      INVENTORY_URL: http://inventory-svc:3002/v1/inventory
+      SHIPPING_URL:  http://shipping-svc:3004/v1/shipping
+      REDIS_URL: redis://redis:6379 
+      # gateway calls orders/payments via NATS only, no extra URLs needed
+      # But if call them over HTTP, add ORDERS_URL / PAYMENTS_URL nedds to be added here
+    depends_on:
+      - orders-svc
+      - payments-svc
+      - inventory-svc
+      - shipping-svc
+      - nats
+      - redis
+    ports:
+      - "3000:3000"
 
 volumes:
   pgdata:

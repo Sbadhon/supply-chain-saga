@@ -19,10 +19,18 @@ export async function getById(req, res, next) {
   }
 }
 
+function pickIdem(h = {}) {
+  return h['idempotency-key']
+      || h['x-idempotency-key']
+      || h['Idempotency-Key']
+      || h['X-Idempotency-Key'];
+}
+
 export async function create(req, res, next) {
   try {
     const { order_id, label_url } = req.body || {};
-    const created = await svc.create({ order_id, label_url });
+    const idempotency_key = pickIdem(req.headers);
+    const created = await svc.create({ order_id, label_url, idempotency_key });
     res.status(201).json(created);
   } catch (error) {
     next(error);

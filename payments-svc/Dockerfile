@@ -1,17 +1,16 @@
-# ---------- Builder ----------
-FROM node:20-alpine AS builder
+# ---- builder ----
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# ---------- Runtime ----------
-FROM node:20-alpine AS runner
+# ---- runner ----
+FROM node:20-slim AS runner
 WORKDIR /app
+ENV NODE_ENV=production
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
-COPY .env .env
-EXPOSE 3003
 CMD ["node", "dist/main.js"]

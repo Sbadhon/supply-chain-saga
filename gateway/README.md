@@ -1,98 +1,66 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+A NestJS API Gateway that fronts all services and normalizes cross-cutting concerns. It exposes HTTP endpoints to the frontend and fans out to services via NATS (orders/payments) and HTTP (inventory/shipping).
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+##Highlights
+Hybrid transport: NATS (microservices) + Axios (HTTP services).
+Trace ID propagation: creates/forwards X-Trace-Id to all downstreams.
+Idempotency header passthrough: forwards Idempotency-Key to services.
+CORS & Security: helmet + CORS, exposes X-Trace-Id to the browser.
+Thin controllers: gateway stays transport-only; validation lives in services.
 
-## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+##API
+POST	/orders	NATS → orders-svc
+POST	/orders/:id/approve	NATS → orders-svc
+POST	/orders/:id/cancel	NATS → orders-svc
+POST	/payments	NATS → payments-svc
+POST	/payments/:id/retry	NATS → payments-svc
+POST	/payments/:id/void	NATS → payments-svc
+GET	/inventory	HTTP → inventory
+POST	/inventory/reserve	HTTP → inventory
+POST	/shipping/shipments	HTTP → shipping
+POST	/shipping/shipments/cancel	HTTP → shipping
+All unsafe writes accept Idempotency-Key. All responses include X-Trace-Id.
 
-## Project setup
 
-```bash
-$ npm install
-```
+##Environment
+For local dev (.env):
+PORT=3000
+NATS_URL=nats://localhost:4222
+INVENTORY_URL=http://localhost:3002/v1/inventory
+SHIPPING_URL=http://localhost:3004/v1/shipping
+REDIS_URL=redis://localhost:6379  
+PORT=3000
+NATS_URL=nats://nats:4222
+INVENTORY_URL=http://inventory-svc:3002/v1/inventory
+SHIPPING_URL=http://shipping-svc:3004/v1/shipping
 
-## Compile and run the project
 
-```bash
-# development
-$ npm run start
+##Run
+npm i
+cp .env.example .env
+npm run start:dev
+# or via docker-compose (recommended for full stack)
 
-# watch mode
-$ npm run start:dev
 
-# production mode
-$ npm run start:prod
-```
 
-## Run tests
+##Tests
+# Orders (NATS)
+curl -sS -X POST http://localhost:3000/orders \
+  -H 'Content-Type: application/json' -H 'Idempotency-Key: o-1' \
+  -d '{"customerId":"C1","items":[{"sku":"SKU-1","quantity":1,"unitPrice":9.99}]}' | jq
 
-```bash
-# unit tests
-$ npm run test
+# Inventory (HTTP)
+curl -sS http://localhost:3000/inventory | jq
 
-# e2e tests
-$ npm run test:e2e
+# Shipping (HTTP)
+curl -sS -X POST http://localhost:3000/shipping/shipments \
+  -H 'Content-Type: application/json' -H 'Idempotency-Key: s-1' \
+  -d '{"order_id":"ORDER-2001"}' | jq
 
-# test coverage
-$ npm run test:cov
-```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+##Architecture
+The gateway assigns/propagates a traceId to every downstream call and exposes it back to the browser.
+Orders/Payments use NATS so they can scale horizontally and emit/consume events.
+Inventory/Shipping are HTTP today (Express), so the gateway calls them with Axios (HttpModule).
+Idempotency is enforced in services; the gateway simply forwards headers.

@@ -1,15 +1,15 @@
-Payments Service (payment-svc)
+##Payments Service (payment-svc)
 Handles the payment lifecycle for orders.
 Built with NestJS + TypeORM + PostgreSQL + NATS, focusing on idempotency, state transitions, and reliability.
 
-Features
+##Features
 Idempotent Payment Creation → safely retry without double charging.
 Rich Payment Status Enum → NEW, AUTHORIZED, CAPTURED, REFUNDED, VOIDED, etc.
 Retry & Void flows supported.
 Payment Events Timeline → exposes an event history endpoint.
 TraceId Propagation for observability.
 
-Endpoints (HTTP)
+##Endpoints (HTTP)
 POST /v1/payments	Create new payment
 GET	/v1/payments	List all payments	
 GET	/v1/payments/:id	Fetch payment by ID
@@ -17,7 +17,7 @@ GET	/v1/payments/:id/events	Timeline of events
 POST	/v1/payments/:id/retry	Retry processing	by state
 POST	/v1/payments/:id/void	Void authorization	by state
 
-Message Patterns (NATS)
+##Message Patterns (NATS)
 payments.create	{ dto, traceId, idempotencyKey }	Payment
 payments.getById	{ id, traceId }	Payment
 payments.getAll	{ traceId }	Payment[]
@@ -25,7 +25,7 @@ payments.getEvents	{ id, traceId }	Events[]
 payments.retry	{ id, traceId }	Payment
 payments.void	{ id, traceId }	Payment
 
-Tech Stack
+##Tech Stack
 NestJS
 TypeORM + PostgreSQL
 NATS transport

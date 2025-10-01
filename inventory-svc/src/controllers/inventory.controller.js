@@ -1,4 +1,4 @@
-import * as svc from '../services/inventory.service.js';
+import * as svc from "../services/inventory.service.js";
 
 /** GET /v1/inventory */
 export async function getAll(_req, res, next) {
@@ -15,7 +15,7 @@ export async function getAll(_req, res, next) {
 export async function getBySku(req, res, next) {
   try {
     const row = await svc.getInventory(req.params.sku);
-    if (!row) return res.status(404).json({ error: 'SKU not found' });
+    if (!row) return res.status(404).json({ error: "SKU not found" });
     res.json(row);
   } catch (error) {
     next(error);
@@ -25,6 +25,9 @@ export async function getBySku(req, res, next) {
 /** POST /v1/inventory/reserve  { orderId, sku, quantity, location? } */
 export async function reserve(req, res, next) {
   try {
+    console.log(
+      `[traceId=${req.traceId}] inventory.reserve sku=${req.body?.sku} qty=${req.body?.quantity}`
+    );
     const out = await svc.reserveStock(req.body);
     if (!out.success) return res.status(409).json(out);
     res.status(201).json(out);

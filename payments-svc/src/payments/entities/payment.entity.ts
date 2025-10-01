@@ -23,6 +23,10 @@ import {
   }
   
   @Entity('payments')
+  @Index('uq_payments_idempotency_key', ['idempotencyKey'], {
+    unique: true,
+    where: '"idempotency_key" IS NOT NULL',
+  })
   export class Payment {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
@@ -57,10 +61,9 @@ import {
     @Column({ type: 'varchar', length: 128, nullable: true, name: 'provider_payment_id' })
     providerPaymentId?: string | null;
   
-    @Column({ type: 'varchar', length: 64, name: 'idempotency_key', nullable: false })
-    @Index('uq_payments_idempotency_key', { unique: true })
-    idempotencyKey!: string;    
-  
+    @Column({ name: 'idempotency_key', type: 'varchar', length: 64, nullable: true })
+    idempotencyKey?: string | null;
+    
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
   
