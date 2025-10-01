@@ -25,34 +25,39 @@ Designed as a **portfolio-ready project** to demonstrate production patterns lik
 ```mermaid
 flowchart TD
     A[Frontend (Angular+NgRx)] -->|HTTP| GW[API Gateway (NestJS)]
-    
-    subgraph GW[Gateway]
-      GWN[NATS Client] --> ORD
-      GWN --> PAY
-      GWH[Axios Client] --> INV
-      GWH --> SHIP
+
+    subgraph Gateway
+        GWN[NATS Client] --> ORD
+        GWN --> PAY
+        GWH[Axios Client] --> INV
+        GWH --> SHIP
     end
 
     subgraph ORD[orders-svc (NestJS)]
-      ORDDB[(Postgres)]
+        ORD --> ORDDB[(Postgres)]
     end
 
     subgraph PAY[payments-svc (NestJS)]
-      PAYDB[(Postgres)]
+        PAY --> PAYDB[(Postgres)]
     end
 
     subgraph INV[inventory-svc (Express)]
-      INVDB[(Postgres)]
+        INV --> INVDB[(Postgres)]
     end
 
     subgraph SHIP[shipping-svc (Express)]
-      SHIPDB[(Postgres)]
+        SHIP --> SHIPDB[(Postgres)]
     end
 
-    GW -->|traceId + idempotency-key| ORD & PAY & INV & SHIP
-    ORD -->|events (future)| PAY & INV & SHIP
-```
+    GW -->|traceId + idempotency-key| ORD
+    GW -->|traceId + idempotency-key| PAY
+    GW -->|traceId + idempotency-key| INV
+    GW -->|traceId + idempotency-key| SHIP
 
+    ORD -->|events (future)| PAY
+    ORD -->|events (future)| INV
+    ORD -->|events (future)| SHIP
+```
 
 
 ##Features
