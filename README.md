@@ -51,6 +51,7 @@ flowchart TD
 
     GW -->|traceId + idempotency-key| ORD & PAY & INV & SHIP
     ORD -->|events (future)| PAY & INV & SHIP
+```
 
 
 
