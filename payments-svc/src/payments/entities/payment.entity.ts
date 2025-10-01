@@ -57,9 +57,9 @@ import {
     @Column({ type: 'varchar', length: 128, nullable: true, name: 'provider_payment_id' })
     providerPaymentId?: string | null;
   
-    @Index()
-    @Column({ type: 'varchar', length: 64, nullable: true, unique: true, name: 'idempotency_key' })
-    idempotencyKey?: string | null;
+    @Column({ type: 'varchar', length: 64, name: 'idempotency_key', nullable: false })
+    @Index('uq_payments_idempotency_key', { unique: true })
+    idempotencyKey!: string;    
   
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
