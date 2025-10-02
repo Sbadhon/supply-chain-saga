@@ -6,7 +6,7 @@ import { PaymentSummary, PaymentEvent } from './payment.model';
 
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
-  private readonly baseUrl = `${environment.payment_svc}/v1/payments`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/v1/payments`;
 
   constructor(private http: HttpClient) {}
 

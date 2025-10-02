@@ -1,5 +1,4 @@
-// src/app/shipping/shipping-detail/shipping-detail.component.ts
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -15,6 +14,7 @@ import { Shipment } from '@app/store/shipping/shipping.model';
   imports: [CommonModule, RouterModule],
   templateUrl: './shipping-detail.component.html',
   styleUrls: ['./shipping-detail.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShippingDetailComponent implements OnDestroy {
   shipment$!: Observable<Shipment | undefined>;

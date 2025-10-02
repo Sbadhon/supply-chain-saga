@@ -14,7 +14,7 @@ import { environment } from 'environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
-  private readonly baseUrl = `${environment.inventory_svc}/v1/inventory`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/v1/inventory`;
 
   constructor(private http: HttpClient) {}
 

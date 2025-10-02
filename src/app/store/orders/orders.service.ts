@@ -6,7 +6,7 @@ import { environment } from 'environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
-  private readonly baseUrl = `${environment.order_svc}/v1/orders`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/v1/orders`;
   constructor(private http: HttpClient) {}
 
   getOrders(): Observable<Order[]> {

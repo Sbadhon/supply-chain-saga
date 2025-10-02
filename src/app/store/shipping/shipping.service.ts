@@ -6,7 +6,7 @@ import { Shipment, ShipmentEvent, CreateShipmentDto, CancelShipmentDto } from '.
 
 @Injectable({ providedIn: 'root' })
 export class ShippingService {
-  private readonly base = `${environment.shipping_svc}/v1/shipping/shipments`;
+  private readonly base = `${environment.apiBaseUrl}/v1/shipping/shipments`;
 
   constructor(private http: HttpClient) {}
 

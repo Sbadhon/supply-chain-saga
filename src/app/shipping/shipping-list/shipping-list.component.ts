@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -18,8 +18,9 @@ type SortDir = 'asc' | 'desc';
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './shipping-list.component.html',
   styleUrls: ['./shipping-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ShippingListComponent implements OnInit{
+export class ShippingListComponent implements OnInit {
   shipments$: Observable<Shipment[]>;
   loading$: Observable<boolean>;
   error$: Observable<string | undefined>;

@@ -1,11 +1,9 @@
 <div class="container py-3">
+  <div class="text-muted small d-flex justify-content-center mb-3">
+    Manage and inspect payment attempts
+  </div>
   <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
-    <div class="me-auto">
-      <h4 class="mb-0">Payments</h4>
-      <div class="text-muted small">Manage and inspect payment attempts</div>
-    </div>
-
-    <div class="input-group" style="max-width: 340px">
+    <div class="input-group">
       <span class="input-group-text">Search</span>
       <input
         class="form-control"
@@ -14,33 +12,33 @@
         (input)="onSearchChange($any($event.target).value)"
       />
     </div>
-
-    <div class="input-group" style="width: 220px">
-      <span class="input-group-text">Status</span>
-      <select
-        class="form-select"
-        (change)="onStatusChange($any($event.target).value)"
-      >
-        <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
-      </select>
-    </div>
-
-    <div class="input-group" style="width: 180px">
-      <span class="input-group-text">Per page</span>
-      <select
-        class="form-select"
-        [(ngModel)]="pageSizeValue"
-        (ngModelChange)="onPageSizeChange($event)"
-      >
-        <option [ngValue]="10">10</option>
-        <option [ngValue]="25">25</option>
-        <option [ngValue]="50">50</option>
-      </select>
+    <div class="d-flex justify-content-between align-items-center w-100">
+      <div class="input-group">
+        <span class="input-group-text">Status</span>
+        <select
+          class="form-select"
+          (change)="onStatusChange($any($event.target).value)"
+        >
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <span class="input-group-text">Per page</span>
+        <select
+          class="form-select"
+          [(ngModel)]="pageSizeValue"
+          (ngModelChange)="onPageSizeChange($event)"
+        >
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </div>
     </div>
   </div>
 
   <ng-container *ngIf="payments$ | async as payments">
-    <div class="table-responsive">
+    <div class="table-responsive pt-3">
       <table class="table table-hover align-middle">
         <thead>
           <tr>
@@ -125,8 +123,12 @@
         </tbody>
       </table>
     </div>
-
-    <!-- Pagination -->
+    <div
+      *ngIf="!totalAfterFilter(payments)"
+      class="text-center text-muted py-5"
+    >
+      No payments match your filters.
+    </div>
     <div class="d-flex justify-content-between align-items-center mt-2">
       <div class="text-muted small">
         Page {{ page() }} / {{ pageCount(payments) }} · Total
@@ -148,12 +150,6 @@
           Next
         </button>
       </div>
-    </div>
-    <div
-      *ngIf="!totalAfterFilter(payments)"
-      class="text-center text-muted py-5"
-    >
-      No payments match your filters.
     </div>
   </ng-container>
 

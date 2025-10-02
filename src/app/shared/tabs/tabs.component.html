@@ -1,0 +1,16 @@
+<div class="tab-layout">
+  <ul class="nav nav-tabs">
+    <li class="nav-item" *ngFor="let tab of tabs">
+      <a
+        class="nav-link custom-tab"
+        [routerLink]="tab.route"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        role="tab"
+        (click)="setActiveTab(tab.type)"
+      >
+        {{ tab.label }}
+      </a>
+    </li>
+  </ul>
+</div>

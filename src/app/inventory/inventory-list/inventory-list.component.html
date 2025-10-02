@@ -1,205 +1,283 @@
-<div class="container mt-4">
-  <div class="d-flex align-items-center justify-content-between mb-2">
-    <h2 class="m-0">Inventory</h2>
-    <div class="d-flex gap-2 flex-wrap">
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="status === 'ALL'"
-        (click)="filter('ALL')"
-      >
-        All
-      </button>
+<div class="container py-3">
+  <div class="text-muted small d-flex justify-content-center mb-3">
+    Manage and inspect inventory
+  </div>
 
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="status === 'LOW'"
-        (click)="filter('LOW')"
-      >
-        Low
-      </button>
-
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="status === 'OUT'"
-        (click)="filter('OUT')"
-      >
-        Out
-      </button>
-
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="status === 'OK'"
-        (click)="filter('OK')"
-      >
-        OK
-      </button>
-
+  <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    <div class="input-group">
+      <span class="input-group-text">Search</span>
       <input
-        class="form-control form-control-sm"
-        placeholder="Search SKU / name / supplier"
-        (input)="onSearch($event)"
-        style="min-width: 260px"
+        class="form-control"
+        type="search"
+        placeholder="SKU, supplier, location"
+        (input)="onSearchChange($any($event.target).value)"
       />
-      <select
-        class="form-select form-select-sm"
-        style="width: auto"
-        [(ngModel)]="supplier"
-        (change)="applyFilters()"
-      >
-        <option value="ALL">All suppliers</option>
-        @for (opt of (suppliers$ | async) ?? []; track $index) {
-          <option [value]="opt">{{ opt }}</option>
-        }
-      </select>
-      <select
-        class="form-select form-select-sm"
-        style="width: auto"
-        [(ngModel)]="location"
-        (change)="applyFilters()"
-      >
-        <option value="ALL">All locations</option>
-        @for (opt of (locations$ | async) ?? []; track $index) {
-          <option [value]="opt">{{ opt }}</option>
-        }
-      </select>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center w-100">
+      <div class="input-group">
+        <span class="input-group-text">Status</span>
+        <select
+          class="form-select"
+          (change)="onStatusChange($any($event.target).value)"
+        >
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="input-group" style="max-width: 260px">
+        <span class="input-group-text">Supplier</span>
+        <select
+          class="form-select"
+          (change)="onSupplierChange($any($event.target).value)"
+        >
+          <option value="ALL">All</option>
+          <option *ngFor="let s of (suppliers$ | async) ?? []" [value]="s">
+            {{ s }}
+          </option>
+        </select>
+      </div>
+
+      <div class="input-group" style="max-width: 240px">
+        <span class="input-group-text">Location</span>
+        <select
+          class="form-select"
+          (change)="onLocationChange($any($event.target).value)"
+        >
+          <option value="ALL">All</option>
+          <option *ngFor="let l of (locations$ | async) ?? []" [value]="l">
+            {{ l }}
+          </option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <span class="input-group-text">Per page</span>
+        <select
+          class="form-select"
+          [(ngModel)]="pageSizeValue"
+          (ngModelChange)="onPageSizeChange($event)"
+        >
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  @if ((loading$ | async) && !(items$ | async)?.length) {
-    <div class="text-center my-4">
-      <div class="spinner-border" role="status"></div>
-    </div>
-  }
-
-  @if (error$ | async; as error) {
-    <div class="alert alert-danger my-2">{{ error }}</div>
-  }
-
-  @if (filteredInventories$ | async; as vm) {
-    @if (vm.total > 0) {
-      <table class="table table-striped align-middle">
-        <thead class="table-light sticky-top">
+  <ng-container *ngIf="items$ | async as items">
+    <div class="table-responsive pt-3">
+      <table class="table table-hover align-middle">
+        <thead>
           <tr>
-            <th>SKU</th>
-            <th class="d-none d-md-table-cell">Supplier</th>
-            <th class="d-none d-lg-table-cell">Location</th>
-            <th class="text-end">On&nbsp;Hand</th>
-            <th class="text-end d-none d-lg-table-cell">Reserved</th>
+            <th (click)="setSort('sku')" role="button">
+              SKU
+              <span class="text-muted small" *ngIf="sortKey() === 'sku'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th
+              class="d-none d-md-table-cell"
+              (click)="setSort('supplierId')"
+              role="button"
+            >
+              Supplier
+              <span class="text-muted small" *ngIf="sortKey() === 'supplierId'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th
+              class="d-none d-lg-table-cell"
+              (click)="setSort('location')"
+              role="button"
+            >
+              Location
+              <span class="text-muted small" *ngIf="sortKey() === 'location'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th
+              class="text-end"
+              (click)="setSort('available_qty')"
+              role="button"
+            >
+              On&nbsp;Hand
+              <span
+                class="text-muted small"
+                *ngIf="sortKey() === 'available_qty'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th
+              class="text-end d-none d-lg-table-cell"
+              (click)="setSort('reserved_qty')"
+              role="button"
+            >
+              Reserved
+              <span
+                class="text-muted small"
+                *ngIf="sortKey() === 'reserved_qty'"
+                >({{ sortDir() }})</span
+              >
+            </th>
             <th class="text-end">Available</th>
-            <th class="text-end d-none d-md-table-cell">Inbound</th>
-            <th class="text-end d-none d-md-table-cell">Reorder</th>
+            <th
+              class="text-end d-none d-md-table-cell"
+              (click)="setSort('inbound')"
+              role="button"
+            >
+              Inbound
+              <span class="text-muted small" *ngIf="sortKey() === 'inbound'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th
+              class="text-end d-none d-md-table-cell"
+              (click)="setSort('reorderPoint')"
+              role="button"
+            >
+              Reorder
+              <span
+                class="text-muted small"
+                *ngIf="sortKey() === 'reorderPoint'"
+                >({{ sortDir() }})</span
+              >
+            </th>
             <th>Status</th>
-            <th class="d-none d-sm-table-cell">Updated</th>
-            <th></th>
+            <th
+              class="d-none d-sm-table-cell"
+              (click)="setSort('updatedAt')"
+              role="button"
+            >
+              Updated
+              <span class="text-muted small" *ngIf="sortKey() === 'updatedAt'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th class="text-end">Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          @for (item of vm.rows; track item.id) {
-            <tr [ngClass]="setRowClass(item)">
-              <td>
-                <a [routerLink]="['/inventory', item.id]">{{ item.sku }}</a>
-              </td>
-              <td class="d-none d-md-table-cell">
-                {{ item.supplierId || "—" }}
-              </td>
-              <td class="d-none d-lg-table-cell">
-                {{ item.location || "MAIN" }}
-              </td>
-              <td class="text-end">{{ item.available_qty }}</td>
-              <td class="text-end d-none d-lg-table-cell">
-                {{ item.reserved_qty }}
-              </td>
+          <tr
+            *ngFor="let item of filteredSortedPaged(items); trackBy: trackById"
+            [ngClass]="setRowClass(item)"
+          >
+            <td>
+              <a [routerLink]="['/inventory', item.id]">{{ item.sku }}</a>
+            </td>
+            <td class="d-none d-md-table-cell">{{ item.supplierId || "—" }}</td>
+            <td class="d-none d-lg-table-cell">
+              {{ item.location || "MAIN" }}
+            </td>
 
-              <td class="text-end">
-                <span class="badge" [ngClass]="availableBadgeClass(item)">
-                  {{ available(item) }}
-                </span>
-              </td>
+            <td class="text-end">{{ item.available_qty }}</td>
+            <td class="text-end d-none d-lg-table-cell">
+              {{ item.reserved_qty }}
+            </td>
 
-              <td class="text-end d-none d-md-table-cell">
-                {{ item.inbound }}
-              </td>
-              <td class="text-end d-none d-md-table-cell">
-                {{ item.reorderPoint ?? "—" }}
-              </td>
+            <td class="text-end">
+              <span class="badge" [ngClass]="availableBadgeClass(item)">
+                {{ available(item) }}
+              </span>
+            </td>
 
-              <td>
-                <span class="badge" [ngClass]="statusBadgeClass(item)">
-                  {{ out(item) ? "Out" : low(item) ? "Low" : "OK" }}
-                </span>
-              </td>
+            <td class="text-end d-none d-md-table-cell">{{ item.inbound }}</td>
+            <td class="text-end d-none d-md-table-cell">
+              {{ item.reorderPoint ?? "—" }}
+            </td>
 
-              <td class="d-none d-sm-table-cell">
-                {{ item.updatedAt | date: "short" }}
-              </td>
+            <td>
+              <span class="badge" [ngClass]="statusBadgeClass(item)">
+                {{ out(item) ? "Out" : low(item) ? "Low" : "OK" }}
+              </span>
+            </td>
 
-              <td class="text-nowrap">
-                <div class="btn-group btn-group-sm">
-                  <button
-                    class="btn btn-outline-primary"
-                    (click)="openQuickView(item.id)"
-                  >
+            <td class="d-none d-sm-table-cell">
+              {{ item.updatedAt | date: "short" }}
+            </td>
+
+            <td class="text-end">
+              <div ngbDropdown class="d-inline-block">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  ngbDropdownToggle
+                >
+                  Actions
+                </button>
+                <div ngbDropdownMenu>
+                  <button ngbDropdownItem (click)="openQuickView(item.id)">
                     View
                   </button>
                   <button
-                    class="btn btn-outline-success"
+                    class="dropdown-item"
+                    type="button"
                     (click)="receive(item.id)"
                   >
                     Receive
                   </button>
                   <button
-                    class="btn btn-outline-secondary"
+                    class="dropdown-item"
+                    type="button"
                     (click)="adjust(item.id)"
                   >
                     Adjust
                   </button>
                   <button
-                    class="btn btn-outline-warning"
+                    class="dropdown-item"
+                    type="button"
                     (click)="move(item.id)"
                   >
                     Move
                   </button>
                   <button
-                    class="btn btn-outline-dark"
+                    class="dropdown-item"
+                    type="button"
                     (click)="reserve(item.id)"
                   >
                     Reserve
                   </button>
                 </div>
-              </td>
-            </tr>
-          }
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
+    </div>
 
-      <div class="d-flex justify-content-between align-items-center p-2">
-        <div class="text-muted small">Total: {{ vm.total }}</div>
-        <div class="btn-group">
-          <button
-            class="btn btn-sm btn-outline-secondary"
-            [disabled]="page === 1"
-            (click)="setPage(page - 1)"
-          >
-            Prev
-          </button>
+    <div *ngIf="!totalAfterFilter(items)" class="text-center text-muted py-5">
+      No inventory matches your filters.
+    </div>
 
-          <button
-            class="btn btn-sm btn-outline-secondary"
-            [disabled]="page * pageSize >= vm.total"
-            (click)="setPage(page + 1)"
-          >
-            Next
-          </button>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mt-2">
+      <div class="text-muted small">
+        Page {{ page() }} / {{ pageCount(items) }} · Total
+        {{ totalAfterFilter(items) }}
       </div>
-    } @else {
-      <div class="text-center text-muted py-5">
-        <div class="mb-2">No inventory found.</div>
-        <div class="small">Try another search or filter.</div>
+      <div class="btn-group">
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="prevPage()"
+          [disabled]="page() === 1"
+        >
+          Prev
+        </button>
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="nextPage(items)"
+          [disabled]="page() >= pageCount(items)"
+        >
+          Next
+        </button>
       </div>
-    }
-  }
+    </div>
+  </ng-container>
+
+  <div *ngIf="loading$ | async" class="text-muted small mt-2">Loading…</div>
+  <div *ngIf="error$ | async as err" class="text-danger small mt-2">
+    Error: {{ err }}
+  </div>
 </div>
 
 <app-inventory-modals></app-inventory-modals>

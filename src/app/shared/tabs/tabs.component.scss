@@ -1,0 +1,32 @@
+.tab-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+} 
+
+.nav-tabs {
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+  
+.tab-content {
+  background-color: transparent;
+}
+
+.custom-tab {
+  border: none !important;
+  color: black !important;
+  font-weight: normal;
+  border-bottom: 3px solid transparent;
+  transition: border-bottom 0.3s ease, font-weight 0.3s ease;
+}
+
+.custom-tab.active {
+  font-weight: bold;
+  border-bottom: 3px solid #2d9098 !important;
+}
+
+.custom-tab:hover {
+  color: #2d9098 !important;
+}

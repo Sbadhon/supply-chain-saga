@@ -1,119 +1,155 @@
-<div class="container mt-4">
-  <div class="d-flex align-items-center justify-content-between mb-2">
-    <h2 class="m-0">Orders</h2>
-    <div class="d-flex gap-2 flex-wrap">
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="currentStatus === 'ALL'"
-        (click)="filter('ALL')"
-      >
-        All
-      </button>
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="currentStatus === 'PENDING'"
-        (click)="filter('PENDING')"
-      >
-        Pending
-      </button>
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="currentStatus === 'RESERVED'"
-        (click)="filter('RESERVED')"
-      >
-        Reserved
-      </button>
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="currentStatus === 'PAID'"
-        (click)="filter('PAID')"
-      >
-        Paid
-      </button>
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="currentStatus === 'SHIPPED'"
-        (click)="filter('SHIPPED')"
-      >
-        Shipped
-      </button>
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        [class.active]="currentStatus === 'CANCELED'"
-        (click)="filter('CANCELED')"
-      >
-        Canceled
-      </button>
+<div class="container py-3">
+  <div class="text-muted small d-flex justify-content-center mb-3">
+    Manage and inspect orders
+  </div>
 
+  <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    <div class="input-group">
+      <span class="input-group-text">Search</span>
       <input
-        class="form-control form-control-sm"
-        placeholder="Search id / customer / SKU"
-        (input)="onSearch($event)"
-        style="min-width: 260px"
+        class="form-control"
+        type="search"
+        placeholder="ID, Customer, SKU"
+        (input)="onSearchChange($any($event.target).value)"
       />
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center w-100">
+      <div class="input-group">
+        <span class="input-group-text">Status</span>
+        <select
+          class="form-select"
+          (change)="onStatusChange($any($event.target).value)"
+        >
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <span class="input-group-text">Per page</span>
+        <select
+          class="form-select"
+          [(ngModel)]="pageSizeValue"
+          (ngModelChange)="onPageSizeChange($event)"
+        >
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  @if (loading$ | async) {
-    <div class="text-center my-4">
-      <div class="spinner-border" role="status"></div>
-    </div>
-  }
-
-  @if (error$ | async; as error) {
-    <div class="alert alert-danger my-2">{{ error }}</div>
-  }
-
-  @if (filteredOrders$ | async; as orders) {
-    @if (orders.length > 0) {
-      <table class="table table-striped align-middle">
-        <thead class="table-light sticky-top">
+  <ng-container *ngIf="orders$ | async as orders">
+    <div class="table-responsive pt-3">
+      <table class="table table-hover align-middle">
+        <thead>
           <tr>
-            <th>Order ID</th>
+            <th (click)="setSort('createdAt')" role="button">
+              Created
+              <span class="text-muted small" *ngIf="sortKey() === 'createdAt'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th (click)="setSort('id')" role="button">
+              Order
+              <span class="text-muted small" *ngIf="sortKey() === 'id'"
+                >({{ sortDir() }})</span
+              >
+            </th>
             <th>Customer</th>
+            <th (click)="setSort('total')" role="button" class="text-end">
+              Amount
+              <span class="text-muted small" *ngIf="sortKey() === 'total'"
+                >({{ sortDir() }})</span
+              >
+            </th>
+            <th (click)="setSort('status')" role="button">
+              Status
+              <span class="text-muted small" *ngIf="sortKey() === 'status'"
+                >({{ sortDir() }})</span
+              >
+            </th>
             <th>Items</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Age</th>
-            <th>Created</th>
-            <th></th>
+            <th class="text-end">Actions</th>
           </tr>
         </thead>
+
         <tbody>
-          @for (order of orders; track order.id) {
-            <tr [ngClass]="setRowClass(order)">
-              <td>
-                <a [routerLink]="['/orders', order.id]">#{{ order.id }}</a>
-              </td>
-              <td>{{ order.customerId || "—" }}</td>
-              <td>{{ order.items.length }}</td>
-              <td>{{ order.total| currency: "USD" }}</td>
-              <td>
-                <span class="badge" [ngClass]="statusClass(order.status)">{{
-                  order.status
-                }}</span>
-              </td>
-              <td>{{ order.createdAt | timeAgo }}</td>
-              <td>{{ order.createdAt | date: "short" }}</td>
-              <td>
-                <button
-                  class="btn btn-sm btn-outline-primary"
-                  (click)="openOrderById(order)"
-                >
-                  View
-                </button>
-              </td>
-            </tr>
-          }
+          <tr
+            *ngFor="let o of filteredSortedPaged(orders); trackBy: trackById"
+            [routerLink]="['/orders', o.id]"
+            class="table-row-link"
+          >
+            <td>{{ o.createdAt | date: "short" }}</td>
+            <td class="text-truncate" style="max-width: 180px">
+              <code>{{ o.id }}</code>
+            </td>
+            <td class="text-truncate" style="max-width: 280px">
+              <small class="text-muted">{{ o.customerId || "—" }}</small>
+            </td>
+            <td class="text-end">
+              {{ o.total | number: "1.2-2" }}
+            </td>
+            <td>
+              <span
+                class="badge px-2 py-1"
+                [ngClass]="{
+                  'bg-secondary':
+                    o.status === 'PENDING' || o.status === 'CANCELED',
+                  'bg-primary': o.status === 'RESERVED',
+                  'bg-success': o.status === 'PAID' || o.status === 'SHIPPED',
+                  'bg-danger': o.status === 'FAILED',
+                }"
+              >
+                {{ o.status }}
+              </span>
+            </td>
+            <td class="text-truncate" style="max-width: 220px">
+              {{ o.items.length || 0 }}
+            </td>
+            <td class="text-end">
+              <a
+                [routerLink]="['/orders', o.id]"
+                class="btn btn-sm btn-outline-primary"
+                >View</a
+              >
+            </td>
+          </tr>
         </tbody>
       </table>
-    } @else {
-      <div class="text-center text-muted py-5">
-        <div class="mb-2">No orders found.</div>
-        <button class="btn btn-sm btn-outline-primary" (click)="createSample()">
-          Create sample order
+    </div>
+
+    <div *ngIf="!totalAfterFilter(orders)" class="text-center text-muted py-5">
+      No orders match your filters.
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-2">
+      <div class="text-muted small">
+        Page {{ page() }} / {{ pageCount(orders) }} · Total
+        {{ totalAfterFilter(orders) }}
+      </div>
+      <div class="btn-group">
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="prevPage()"
+          [disabled]="page() === 1"
+        >
+          Prev
+        </button>
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          (click)="nextPage(orders)"
+          [disabled]="page() >= pageCount(orders)"
+        >
+          Next
         </button>
       </div>
-    }
-  }
+    </div>
+  </ng-container>
+
+  <div *ngIf="loading$ | async" class="text-muted small mt-2">Loading…</div>
+  <div *ngIf="error$ | async as err" class="text-danger small mt-2">
+    Error: {{ err }}
+  </div>
 </div>

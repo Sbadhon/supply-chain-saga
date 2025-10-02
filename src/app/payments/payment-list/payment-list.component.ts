@@ -1,4 +1,11 @@
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +27,7 @@ type SortDir = 'asc' | 'desc';
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './payment-list.component.html',
   styleUrls: ['./payment-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaymentListComponent implements OnInit, OnDestroy {
   query = signal<string>('');
