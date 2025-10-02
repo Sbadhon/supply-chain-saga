@@ -46,7 +46,7 @@ flowchart LR
   SHIP -. pub/sub .- NATS
 ```
 
-##Features
+## Features
 Distributed tracing — W3C traceparent propagated end-to-end (also returned as X-Trace-Id).
 Idempotency — all unsafe writes require an Idempotency-Key; duplicates are deduped per service.
 Polyglot microservices — mix of NestJS and Express services.
@@ -55,8 +55,7 @@ Dockerized stack — docker compose up runs Postgres, NATS, and all services.
 NgRx frontend — Angular app consuming the gateway’s REST API.
 
 
-##Quick Start
-
+## Quick Start
 # Clone
 git clone https://github.com/yourname/supplychain-saga.git
 cd supplychain-saga
