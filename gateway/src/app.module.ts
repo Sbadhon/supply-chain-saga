@@ -11,11 +11,12 @@ import { PaymentsController } from './routes/payment.controller';
 import { ShippingController } from './routes/shipping.controller';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
+import { DownstreamHttpService } from './clients/downstream-http.service';
 
 @Module({
   imports: [
     NatsClientModule,
-    HttpModule,
+    HttpModule.register({ timeout: 8000 }),
     ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [
@@ -25,9 +26,10 @@ import { ConfigModule } from '@nestjs/config';
     PaymentsController,
   ],
   providers: [
+    DownstreamHttpService,
     IdempotencyService,
-    { provide: APP_INTERCEPTOR, useClass: TracingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TracingInterceptor },
   ],
 })
 export class AppModule {

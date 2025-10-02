@@ -1,15 +1,36 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+export const ORDERS = 'ORDERS';
+export const PAYMENTS = 'PAYMENTS';
 
 @Module({
-  imports: [
-    ClientsModule.register([
-      { name: 'ORDERS',    transport: Transport.NATS, options: { servers: ['nats://localhost:4222'] } },
-      { name: 'INVENTORY', transport: Transport.NATS, options: { servers: ['nats://localhost:4222'] } },
-      { name: 'SHIPPING',  transport: Transport.NATS, options: { servers: ['nats://localhost:4222'] } },
-      { name: 'PAYMENTS',  transport: Transport.NATS, options: { servers: ['nats://localhost:4222'] } },
-    ]),
+  imports: [ConfigModule],
+  providers: [
+    {
+      provide: ORDERS,
+      useFactory: (cfg: ConfigService) => {
+        const url = cfg.get<string>('NATS_URL') ?? 'nats://nats:4222';
+        return ClientProxyFactory.create({
+          transport: Transport.NATS,
+          options: { servers: [url] },
+        });
+      },
+      inject: [ConfigService],
+    },
+    {
+      provide: PAYMENTS,
+      useFactory: (cfg: ConfigService) => {
+        const url = cfg.get<string>('NATS_URL') ?? 'nats://nats:4222';
+        return ClientProxyFactory.create({
+          transport: Transport.NATS,
+          options: { servers: [url] },
+        });
+      },
+      inject: [ConfigService],
+    },
   ],
-  exports: [ClientsModule],
+  exports: [ORDERS, PAYMENTS],
 })
 export class NatsClientModule {}

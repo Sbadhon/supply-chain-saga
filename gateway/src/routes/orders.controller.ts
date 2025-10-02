@@ -7,21 +7,17 @@ export class OrdersController {
   constructor(@Inject('ORDERS') private readonly orders: ClientProxy) {}
 
   @Get()
-  async getAll(@Req() req: any) {
-    return firstValueFrom(
-      this.orders.send({ cmd: 'orders.getAll' }, { traceId: req.traceId })
-    );
+  getAll(@Req() req: any) {
+    return firstValueFrom(this.orders.send('orders.getAll', { traceId: req.traceId }));
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string, @Req() req: any) {
-    return firstValueFrom(
-      this.orders.send({ cmd: 'orders.getById' }, { id, traceId: req.traceId })
-    );
+  getById(@Param('id') id: string, @Req() req: any) {
+    return firstValueFrom(this.orders.send('orders.getById', { id, traceId: req.traceId }));
   }
 
   @Post()
-  async create(
+  create(
     @Body() dto: any,
     @Req() req: any,
     @Headers() headers: Record<string, string | undefined>,
@@ -33,15 +29,12 @@ export class OrdersController {
       headers['X-Idempotency-Key'];
 
     return firstValueFrom(
-      this.orders.send(
-        { cmd: 'orders.create' },
-        { dto, traceId: req.traceId, idempotencyKey }
-      )
+      this.orders.send('orders.create', { dto, traceId: req.traceId, idempotencyKey })
     );
   }
 
   @Post(':id/approve')
-  async approve(
+  approve(
     @Param('id') id: string,
     @Req() req: any,
     @Headers() headers: Record<string, string | undefined>,
@@ -53,15 +46,12 @@ export class OrdersController {
       headers['X-Idempotency-Key'];
 
     return firstValueFrom(
-      this.orders.send(
-        { cmd: 'orders.approve' },
-        { id, traceId: req.traceId, idempotencyKey }
-      )
+      this.orders.send('orders.approve', { id, traceId: req.traceId, idempotencyKey })
     );
   }
 
   @Post(':id/cancel')
-  async cancel(
+  cancel(
     @Param('id') id: string,
     @Req() req: any,
     @Headers() headers: Record<string, string | undefined>,
@@ -73,10 +63,7 @@ export class OrdersController {
       headers['X-Idempotency-Key'];
 
     return firstValueFrom(
-      this.orders.send(
-        { cmd: 'orders.cancel' },
-        { id, traceId: req.traceId, idempotencyKey }
-      )
+      this.orders.send('orders.cancel', { id, traceId: req.traceId, idempotencyKey })
     );
   }
 }

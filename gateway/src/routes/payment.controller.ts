@@ -7,28 +7,22 @@ export class PaymentsController {
   constructor(@Inject('PAYMENTS') private readonly payments: ClientProxy) {}
 
   @Get()
-  async getAll(@Req() req: any) {
-    return firstValueFrom(
-      this.payments.send({ cmd: 'payments.getAll' }, { traceId: req.traceId })
-    );
+  getAll(@Req() req: any) {
+    return firstValueFrom(this.payments.send('payments.getAll', { traceId: req.traceId }));
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string, @Req() req: any) {
-    return firstValueFrom(
-      this.payments.send({ cmd: 'payments.getById' }, { id, traceId: req.traceId })
-    );
+  getById(@Param('id') id: string, @Req() req: any) {
+    return firstValueFrom(this.payments.send('payments.getById', { id, traceId: req.traceId }));
   }
 
   @Get(':id/events')
-  async getEvents(@Param('id') id: string, @Req() req: any) {
-    return firstValueFrom(
-      this.payments.send({ cmd: 'payments.getEvents' }, { id, traceId: req.traceId })
-    );
+  getEvents(@Param('id') id: string, @Req() req: any) {
+    return firstValueFrom(this.payments.send('payments.getEvents', { id, traceId: req.traceId }));
   }
 
   @Post()
-  async create(
+  create(
     @Body() dto: any,
     @Req() req: any,
     @Headers() headers: Record<string, string | undefined>
@@ -40,15 +34,12 @@ export class PaymentsController {
       headers['X-Idempotency-Key'];
 
     return firstValueFrom(
-      this.payments.send(
-        { cmd: 'payments.create' },
-        { dto, traceId: req.traceId, idempotencyKey }
-      )
+      this.payments.send('payments.create', { dto, traceId: req.traceId, idempotencyKey })
     );
   }
 
   @Post(':id/retry')
-  async retry(
+  retry(
     @Param('id') id: string,
     @Req() req: any,
     @Headers() headers: Record<string, string | undefined>
@@ -60,15 +51,12 @@ export class PaymentsController {
       headers['X-Idempotency-Key'];
 
     return firstValueFrom(
-      this.payments.send(
-        { cmd: 'payments.retry' },
-        { id, traceId: req.traceId, idempotencyKey }
-      )
+      this.payments.send('payments.retry', { id, traceId: req.traceId, idempotencyKey })
     );
   }
 
   @Post(':id/void')
-  async voidPayment(
+  voidPayment(
     @Param('id') id: string,
     @Req() req: any,
     @Headers() headers: Record<string, string | undefined>
@@ -80,10 +68,8 @@ export class PaymentsController {
       headers['X-Idempotency-Key'];
 
     return firstValueFrom(
-      this.payments.send(
-        { cmd: 'payments.void' },
-        { id, traceId: req.traceId, idempotencyKey }
-      )
+      this.payments.send('payments.void', { id, traceId: req.traceId, idempotencyKey })
     );
   }
 }
+
