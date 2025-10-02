@@ -26,6 +26,7 @@ export class PaymentsController {
     @Headers('X-Idempotency-Key') idemKeyX?: string,
   ): Promise<PaymentResponseDto> {
     const key = idemKeyLower || idemKeyXLower || idemKey || idemKeyX;
+    console.log(dto)
     const payment = await this.paymentsService.create(dto, key);
     return this.toResponse(payment);
   }
