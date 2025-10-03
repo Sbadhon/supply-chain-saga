@@ -1,9 +1,9 @@
 import { createAction, props } from '@ngrx/store';
-import { PaymentSummary, PaymentEvent } from './payment.model';
+import { PaymentSummary, PaymentEvent, CreatePaymentInput } from './payment.model';
 
 export const createPayment = createAction(
   '[Payments] Create Payment',
-  props<{ payment: PaymentSummary; idempotencyKey?: string }>()
+  props<{ payment: CreatePaymentInput; idempotencyKey?: string }>()
 );
 
 export const createPaymentSuccess = createAction(
@@ -60,7 +60,7 @@ export const loadPaymentEventsFailure = createAction(
 
 export const retryPayment = createAction(
   '[Payments] Retry Payment',
-  props<{ paymentId: string }>()
+  props<{ paymentId: string; idempotencyKey?: string }>()
 );
 
 export const retryPaymentSuccess = createAction(
@@ -75,7 +75,7 @@ export const retryPaymentFailure = createAction(
 
 export const cancelPayment = createAction(
   '[Payments] Cancel Payment',
-  props<{ paymentId: string }>()
+  props<{ paymentId: string; idempotencyKey?: string }>()
 );
 
 export const cancelPaymentSuccess = createAction(

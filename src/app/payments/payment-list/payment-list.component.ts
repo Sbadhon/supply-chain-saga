@@ -3,20 +3,22 @@ import {
   Component,
   OnDestroy,
   OnInit,
-  computed,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { Observable, Subscription, combineLatest, map } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import * as PaymentsActions from '@app/store/payment/payment.actions';
 import * as PaymentsSelectors from '@app/store/payment/payment.selectors';
 import {
+  CreatePaymentInput,
   PaymentStatus,
   PaymentSummary,
 } from '@app/store/payment/payment.model';
+import { PaymentCreateModalComponent } from '../payment-create-modal/payment-create-modal.component';
+import { clearCreatePaymentKey, getCreatePaymentKey, setCreatePaymentKey } from '@app/core/http/idempotency-storage.util';
 
 type SortKey = 'createdAt' | 'amount' | 'status' | 'orderId';
 type SortDir = 'asc' | 'desc';
@@ -24,14 +26,19 @@ type SortDir = 'asc' | 'desc';
 @Component({
   selector: 'app-payment-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    PaymentCreateModalComponent,
+  ],
   templateUrl: './payment-list.component.html',
   styleUrls: ['./payment-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaymentListComponent implements OnInit, OnDestroy {
   query = signal<string>('');
-  status = signal<string>('all');
+  status = signal<string>('ALL');
   sortKey = signal<SortKey>('createdAt');
   sortDir = signal<SortDir>('desc');
   page = signal<number>(1);
@@ -42,9 +49,9 @@ export class PaymentListComponent implements OnInit, OnDestroy {
   error$: Observable<string | undefined>;
 
   private sub?: Subscription;
-
+  showCreatePaymentModal = signal(false);
   statuses = [
-    'all',
+    'ALL',
     PaymentStatus.NEW,
     PaymentStatus.PROCESSING,
     PaymentStatus.REQUIRES_ACTION,
@@ -84,6 +91,33 @@ export class PaymentListComponent implements OnInit, OnDestroy {
     this.page.set(1);
   }
 
+  openCreatePaymentModal(): void {
+    const key = getCreatePaymentKey() ?? crypto.randomUUID().replace(/-/g, '');
+    setCreatePaymentKey(key);
+    this.showCreatePaymentModal.set(true);
+  }
+
+  cancelCreatePayment(): void {
+    // User cancelled 
+    // clear the key so next attempt is fresh
+    clearCreatePaymentKey();
+    this.showCreatePaymentModal.set(false);
+  }
+
+  submitCreatePayment(payload: { orderId: string; amount: number; currency: string; method?: string }) {
+    const idempotencyKey = getCreatePaymentKey() ?? crypto.randomUUID().replace(/-/g, '');
+
+    const body: CreatePaymentInput = {
+      orderId: payload.orderId,
+      amount: payload.amount,
+      currency: payload.currency,
+      method: payload.method,
+    };
+
+    this.store.dispatch(PaymentsActions.createPayment({ payment: body, idempotencyKey }));
+    this.showCreatePaymentModal.set(false);
+  }
+  
   onPageSizeChange(size: number) {
     this.pageSizeValue = Number(size) || 10;
     this.pageSize.set(this.pageSizeValue);
@@ -118,7 +152,7 @@ export class PaymentListComponent implements OnInit, OnDestroy {
           (payment.methodSummary?.toLowerCase() ?? '').includes(query),
       );
     }
-    if (status !== 'all') {
+    if (status !== 'ALL') {
       list = list.filter((p) => p.status === status);
     }
 
@@ -159,7 +193,7 @@ export class PaymentListComponent implements OnInit, OnDestroy {
         payment.orderId?.toLowerCase().includes(this.query()) ||
         payment.currency?.toLowerCase().includes(this.query()) ||
         (payment.methodSummary?.toLowerCase().includes(this.query()) ?? false);
-      const okS = status === 'all' || payment.status === status;
+      const okS = status === 'ALL' || payment.status === status;
       return okQ && okS;
     }).length;
   }

@@ -27,6 +27,14 @@ export interface PaymentSummary {
   updatedAt: string;
 }
 
+export interface CreatePaymentInput {
+  orderId: string;
+  amount: number;
+  currency: string;
+  method?: string;
+  metadata?: Record<string, any>;
+}
+
 export interface PaymentEvent {
   id: string;
   paymentId: string;

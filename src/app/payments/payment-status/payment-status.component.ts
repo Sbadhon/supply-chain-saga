@@ -3,7 +3,8 @@ import {
   Input,
   OnDestroy,
   OnInit,
-  computed
+  computed,
+  inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -15,7 +16,7 @@ import {
 } from '@app/store/payment/payment.model';
 import * as PaymentsActions from '@app/store/payment/payment.actions';
 import * as PaymentsSelectors from '@app/store/payment/payment.selectors';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-payment-status',
@@ -25,9 +26,10 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./payment-status.component.scss'],
 })
 export class PaymentStatusComponent implements OnInit, OnDestroy {
-  @Input({ required: true })
-  id: string = '3c618105-7171-4ec8-8450-9a0fc3a2a5b2';
+  private readonly store = inject(Store);
+  private readonly route = inject(ActivatedRoute);
 
+  id!: string;
   payment$: Observable<PaymentSummary | undefined>;
   events$: Observable<PaymentEvent[]>;
   loading$: Observable<boolean>;
@@ -36,7 +38,14 @@ export class PaymentStatusComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   badgeClass = computed(() => '');
 
-  constructor(private store: Store) {
+  constructor() {
+    this.route.paramMap.subscribe((params) => {
+      const id = params.get('id');
+      if (id) {
+        this.id = id;
+        this.store.dispatch(PaymentsActions.loadPaymentById({ id }));
+      }
+    });
     this.payment$ = this.store.select(
       PaymentsSelectors.selectPaymentById(this.id),
     );
