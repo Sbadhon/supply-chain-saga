@@ -1,5 +1,6 @@
 const CREATE_KEY = 'createOrderKey';
 const CREATE_PAYMENT_KEY = 'createPaymentKey';
+const CREATE_SHIPMENT_KEY = 'createShipmentKey';
 
 export function setCreateOrderKey(key: string): void {
   try {
@@ -38,5 +39,25 @@ export function getCreatePaymentKey(): string | null {
 export function clearCreatePaymentKey() {
   try {
     sessionStorage.removeItem(CREATE_PAYMENT_KEY);
+  } catch {}
+}
+
+export function setCreateShipmentKey(key: string) {
+  try {
+    sessionStorage.setItem(CREATE_SHIPMENT_KEY, key);
+  } catch {}
+}
+
+export function getCreateShipmentKey(): string | null {
+  try {
+    return sessionStorage.getItem(CREATE_SHIPMENT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearCreateShipmentKey() {
+  try {
+    sessionStorage.removeItem(CREATE_SHIPMENT_KEY);
   } catch {}
 }

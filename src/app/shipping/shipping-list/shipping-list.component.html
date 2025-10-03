@@ -2,6 +2,19 @@
   <div class="text-muted small d-flex justify-content-center mb-3">
     Track and manage shipment labels
   </div>
+  <button
+  class="btn btn-primary ms-auto d-flex justify-content-end mb-2"
+    (click)="openCreateShipmentModal()"
+    [disabled]="(loading$ | async) === true"
+    title="Create a new shipment (idempotent)"
+  >
+    + Create Shipment
+  </button>
+  <app-shipping-create-modal
+    [open]="showCreateShipmentModal"
+    (closed)="cancelCreateShipmentModal()"
+    (submittedShipment)="submitCreateShipment($event)"
+  ></app-shipping-create-modal>
   <div
     class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3"
   >

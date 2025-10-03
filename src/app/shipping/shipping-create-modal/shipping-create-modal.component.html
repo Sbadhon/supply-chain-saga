@@ -1,0 +1,70 @@
+<div *ngIf="open" class="modal d-block" tabindex="0" (click)="onBackdrop()">
+  <div
+    class="modal-dialog modal-sm modal-dialog-centered"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title m-0">Create Shipment</h6>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close"
+          (click)="close()"
+        ></button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label small mb-1" for="order_id">Order ID</label>
+            <input
+              id="order_id"
+              class="form-control form-control-sm"
+              formControlName="order_id"
+              autocomplete="off"
+              placeholder="ORD-123"
+            />
+            <div
+              class="text-danger small mt-1"
+              *ngIf="submitted() && form.get('order_id')?.invalid"
+            >
+              Order ID is required.
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label small mb-1" for="label_url"
+              >Label URL (optional)</label
+            >
+            <input
+              id="label_url"
+              class="form-control form-control-sm"
+              formControlName="label_url"
+              autocomplete="off"
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
+        <div class="modal-footer py-2">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary"
+            (click)="close()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-sm btn-primary"
+            [disabled]="form.invalid"
+          >
+            Create
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div *ngIf="open" class="modal-backdrop fade show"></div>
