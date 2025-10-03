@@ -55,8 +55,8 @@ export class OrderDetailComponent {
   readonly timeline$ = this.order$.pipe(
     map((order) => {
       if (!order) return [] as TimelineStep[];
-      const created = new Date(order.createdAt);
-      const updated = new Date(order.updatedAt);
+      const created = new Date(order.createdAt ?? '');
+      const updated = new Date(order.updatedAt ??  '');
       const steps: TimelineStep[] = [{ state: 'PENDING', at: created }];
       if (updated.getTime() !== created.getTime()) {
         steps.push({ state: order.status, at: updated });
@@ -98,6 +98,7 @@ export class OrderDetailComponent {
   approve(id: string): void {
    this.store.dispatch(OrdersActions.approveOrder({ id }));
   }
+  
   cancel(id: string): void {
    this.store.dispatch(OrdersActions.cancelOrder({ id }));
   }

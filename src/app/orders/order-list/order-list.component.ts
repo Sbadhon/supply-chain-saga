@@ -6,7 +6,9 @@ import { Store } from '@ngrx/store';
 import { Observable, Subscription } from 'rxjs';
 import * as OrdersActions from '@app/store/orders/orders.actions';
 import * as OrdersSelectors from '@app/store/orders/orders.selectors';
-import { Order } from '@app/store/orders/order.model';
+import { CreateOrderInput, Order, OrderItem } from '@app/store/orders/order.model';
+import { OrderCreateModalComponent } from '../order-create-modal/order-create-modal.component';
+import { clearCreateOrderKey, getCreateOrderKey, setCreateOrderKey } from '@app/core/http/idempotency-storage.util';
 
 type SortKey = 'createdAt' | 'total' | 'status' | 'id';
 type SortDir = 'asc' | 'desc';
@@ -14,13 +16,13 @@ type SortDir = 'asc' | 'desc';
 @Component({
   selector: 'app-order-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, OrderCreateModalComponent],
   templateUrl: './order-list.component.html',
   styleUrls: ['./order-list.component.scss'],
 })
 export class OrdersListComponent implements OnInit, OnDestroy {
   query = signal<string>('');
-  status = signal<string>('all');
+  status = signal<string>('ALL');
   sortKey = signal<SortKey>('createdAt');
   sortDir = signal<SortDir>('desc');
   page = signal<number>(1);
@@ -32,8 +34,9 @@ export class OrdersListComponent implements OnInit, OnDestroy {
   error$: Observable<string | undefined>;
 
   private sub?: Subscription;
-
-  statuses = ['all', 'PENDING', 'RESERVED', 'PAID', 'SHIPPED', 'CANCELED'];
+  statuses = ['ALL', 'PENDING', 'RESERVED', 'PAID', 'SHIPPED', 'CANCELED'];
+  showCreateModal = signal(false);
+  private currentCreateKey?: string;
 
   constructor(private store: Store) {
     this.orders$ = this.store.select(OrdersSelectors.selectAllOrders);
@@ -60,6 +63,40 @@ export class OrdersListComponent implements OnInit, OnDestroy {
     this.page.set(1);
   }
 
+  openCreateModal(): void {
+    // Reuse existing key if page refreshed during an in-flight attempt
+    this.currentCreateKey = getCreateOrderKey() ?? crypto.randomUUID().replace(/-/g, '');
+    setCreateOrderKey(this.currentCreateKey);
+    this.showCreateModal.set(true);
+  }
+
+  closeCreateModal(): void {
+    this.showCreateModal.set(false);
+    // User explicitly cancelled;
+    // clear the key so next open gets a fresh one
+    clearCreateOrderKey();
+    this.currentCreateKey = undefined;
+  }
+
+  handleCreate(payload: { customerId?: string; total: number; itemsCount?: number; items: OrderItem[] }) {
+    // Prefer the key that was created when opening the modal; fall back to storage if needed
+    const idempotencyKey =
+      this.currentCreateKey ??
+      getCreateOrderKey() ??
+      crypto.randomUUID().replace(/-/g, '');
+
+    const order: CreateOrderInput = {
+      customerId: payload.customerId,
+      total: payload.total,
+      itemsCount: payload.itemsCount,
+      items: payload.items,
+    };
+
+    this.store.dispatch(OrdersActions.createOrder({ order, idempotencyKey }));
+    //Clear the key; keeping it for potential retry on error
+    this.showCreateModal.set(false);
+  }
+  
   onPageSizeChange(size: number) {
     this.pageSizeValue = Number(size) || 10;
     this.pageSize.set(this.pageSizeValue);
@@ -102,7 +139,7 @@ export class OrdersListComponent implements OnInit, OnDestroy {
       });
     }
 
-    if (status !== 'all') {
+    if (status !== 'ALL') {
       list = list.filter((o) => o.status === status);
     }
 
@@ -152,7 +189,7 @@ export class OrdersListComponent implements OnInit, OnDestroy {
             .toLowerCase()
             .includes(q),
         );
-      const okS = status === 'all' || o.status === status;
+      const okS = status === 'ALL' || o.status === status;
       return okQ && okS;
     }).length;
   }

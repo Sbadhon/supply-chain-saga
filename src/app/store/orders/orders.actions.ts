@@ -1,9 +1,9 @@
 import { createAction, props } from '@ngrx/store';
-import { Order } from './order.model';
+import { CreateOrderInput, Order } from './order.model';
 
 export const createOrder = createAction(
   '[Orders] Create Order',
-  props<{ order: Order; idempotencyKey?: string }>()
+  props<{ order: CreateOrderInput; idempotencyKey?: string }>()
 );
 
 export const createOrderSuccess = createAction(
@@ -46,7 +46,7 @@ export const loadOrderByIdFailure = createAction(
 
 export const approveOrder = createAction(
   '[Orders] Approve Order By Id',
-  props<{ id: string }>()
+  props<{ id: string; idempotencyKey?: string }>()
 )
 
 export const approveOrderSuccess = createAction(
@@ -61,7 +61,7 @@ export const approveOrderFailure = createAction(
 
 export const cancelOrder = createAction(
   '[Orders] Cancel Order By Id',
-  props<{ id: string }>()
+  props<{ id: string; idempotencyKey?: string }>()
 )
 
 export const cancelOrderSuccess = createAction(

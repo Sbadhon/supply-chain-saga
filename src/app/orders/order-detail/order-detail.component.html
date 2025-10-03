@@ -32,9 +32,6 @@
           <h6 class="text-uppercase text-muted">Summary</h6>
           <div><strong>Customer:</strong> {{ order.customerId || "—" }}</div>
           <div>
-            <strong>Idempotency:</strong> {{ order.idempotencyKey || "—" }}
-          </div>
-          <div>
             <strong>Created:</strong> {{ order.createdAt | date: "short" }}
           </div>
           <div>
@@ -87,7 +84,7 @@
               <tr>
                 <th>SKU</th>
                 <th>Supplier</th>
-                <th>Qty</th>
+                <th>Quantity</th>
                 <th>Unit</th>
                 <th class="text-end">Line Total</th>
               </tr>

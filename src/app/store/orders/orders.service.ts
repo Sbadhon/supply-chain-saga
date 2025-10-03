@@ -1,8 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Order } from './order.model';
+import { CreateOrderInput, Order } from './order.model';
 import { environment } from 'environments/environment';
+import { IDEMPOTENCY_CTX } from '../../core/interceptors/idempotency.interceptor';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
@@ -17,20 +18,24 @@ export class OrdersService {
     return this.http.get<Order>(`${this.baseUrl}/${id}`);
   }
 
-  createOrder(
-    order: Partial<Order>,
-    idempotencyKey: string,
-  ): Observable<Order> {
-    return this.http.post<Order>(this.baseUrl, order, {
-      headers: { 'Idempotency-Key': idempotencyKey },
-    });
+  createOrder(order: CreateOrderInput, idempotencyKey?: string): Observable<Order> {
+    const ctx = idempotencyKey
+      ? new HttpContext().set(IDEMPOTENCY_CTX, idempotencyKey)
+      : new HttpContext(); // interceptor will auto-generate if not provided
+    return this.http.post<Order>(this.baseUrl, order, { context: ctx });
   }
 
-  approveOrder(id: string): Observable<Order> {
-    return this.http.post<Order>(`${this.baseUrl}/${id}/approve`, {});
+  approveOrder(id: string, idempotencyKey?: string): Observable<Order> {
+    const ctx = idempotencyKey
+      ? new HttpContext().set(IDEMPOTENCY_CTX, idempotencyKey)
+      : new HttpContext();
+    return this.http.post<Order>(`${this.baseUrl}/${id}/approve`, {}, { context: ctx });
   }
-  
-  cancelOrder(id: string): Observable<Order> {
-    return this.http.post<Order>(`${this.baseUrl}/${id}/cancel`, {});
+
+  cancelOrder(id: string, idempotencyKey?: string): Observable<Order> {
+    const ctx = idempotencyKey
+      ? new HttpContext().set(IDEMPOTENCY_CTX, idempotencyKey)
+      : new HttpContext();
+    return this.http.post<Order>(`${this.baseUrl}/${id}/cancel`, {}, { context: ctx });
   }
 }

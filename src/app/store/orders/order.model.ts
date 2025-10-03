@@ -9,21 +9,19 @@ export interface OrderItem {
   export interface Order {
     id: string;
     customerId?: string;
-    status: string;
-    idempotencyKey: string;
+    status: 'PENDING' | 'RESERVED' | 'PAID' | 'SHIPPED' | 'CANCELED' | 'FAILED';
     metadata?: Record<string, any>;
     items: OrderItem[];
     total: number;
     itemsCount: number;
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string; 
+    updatedAt?: string;
   }
   
-  export type OrderStatus = 
-  'ALL'
- |'PENDING' 
- | 'RESERVED' 
- | 'AUTHORIZED' 
- | 'READY_TO_SHIP' 
- | 'COMPLETED' 
- | 'CANCELLED';
+  export interface CreateOrderInput {
+    customerId?: string;
+    items?: OrderItem[];
+    total?: number;
+    itemsCount?: number; 
+    metadata?: Record<string, any>;
+  }
