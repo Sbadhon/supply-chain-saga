@@ -19,7 +19,7 @@ import {
 import { InventoryModalsComponent } from '../inventory-modals/inventory-modals.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 
-type Status = 'all' | 'LOW' | 'OUT' | 'OK';
+type Status = 'ALL' | 'LOW' | 'OUT' | 'OK';
 type SortKey =
   | 'sku'
   | 'supplierId'
@@ -56,7 +56,7 @@ export class InventoryListComponent implements OnInit {
 
   // signals to mirror PaymentListComponent
   query = signal<string>('');
-  status = signal<Status>('all');
+  status = signal<Status>('ALL');
   supplier = signal<string>('ALL');
   location = signal<string>('ALL');
 
@@ -70,7 +70,7 @@ export class InventoryListComponent implements OnInit {
   selectedId: string | null = null;
   selectItemHistory$: Observable<InventoryEvent[]>;
 
-  statuses: Status[] = ['all', 'LOW', 'OUT', 'OK'];
+  statuses: Status[] = ['ALL', 'LOW', 'OUT', 'OK'];
 
   constructor(private store: Store) {
     this.items$ = this.store.select(InventoryAPISelectors.selectAllInventory);
@@ -113,7 +113,7 @@ export class InventoryListComponent implements OnInit {
     this.page.set(1);
   }
   onStatusChange(v: string) {
-    this.status.set((v as Status) || 'all');
+    this.status.set((v as Status) || 'ALL');
     this.page.set(1);
   }
   onSupplierChange(v: string) {
@@ -192,7 +192,7 @@ export class InventoryListComponent implements OnInit {
     }
 
     // status filter
-    if (status !== 'all') {
+    if (status !== 'ALL') {
       list = list.filter((r) => {
         if (status === 'LOW') return this.low(r) && !this.out(r);
         if (status === 'OUT') return this.out(r);
@@ -246,7 +246,7 @@ export class InventoryListComponent implements OnInit {
         (r.location ?? '').toLowerCase().includes(q);
 
       const okStatus =
-        status === 'all' ||
+        status === 'ALL' ||
         (status === 'LOW' && this.low(r) && !this.out(r)) ||
         (status === 'OUT' && this.out(r)) ||
         (status === 'OK' && !this.low(r) && !this.out(r));

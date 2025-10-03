@@ -13,38 +13,37 @@
         (input)="onSearchChange($any($event.target).value)"
       />
     </div>
-
-    <div class="d-flex justify-content-between align-items-center w-100">
+    <div class="d-flex gap-2 justify-content-between align-items-center w-100">
       <div class="input-group">
         <span class="input-group-text">Status</span>
         <select
           class="form-select"
           (change)="onStatusChange($any($event.target).value)"
         >
-          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
         </select>
       </div>
-
-      <div class="input-group" style="max-width: 260px">
+      <div class="input-group">
         <span class="input-group-text">Supplier</span>
         <select
           class="form-select"
           (change)="onSupplierChange($any($event.target).value)"
         >
-          <option value="ALL">All</option>
-          <option *ngFor="let s of (suppliers$ | async) ?? []" [value]="s">
-            {{ s }}
+          <option value="ALL">ALL</option>
+          <option *ngFor="let suppliers of (suppliers$ | async) ?? []" [value]="suppliers">
+            {{ suppliers }}
           </option>
         </select>
       </div>
-
-      <div class="input-group" style="max-width: 240px">
+    </div>
+    <div class="d-flex justify-content-between align-items-center w-100 gap-2">
+      <div class="input-group">
         <span class="input-group-text">Location</span>
         <select
           class="form-select"
           (change)="onLocationChange($any($event.target).value)"
         >
-          <option value="ALL">All</option>
+          <option value="ALL">ALL</option>
           <option *ngFor="let l of (locations$ | async) ?? []" [value]="l">
             {{ l }}
           </option>
