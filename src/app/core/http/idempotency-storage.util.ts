@@ -1,6 +1,8 @@
 const CREATE_KEY = 'createOrderKey';
 const CREATE_PAYMENT_KEY = 'createPaymentKey';
 const CREATE_SHIPMENT_KEY = 'createShipmentKey';
+const INV_PREFIX = 'invKey';
+type InvKind = 'receive' | 'adjust' | 'move' | 'reserve';
 
 export function setCreateOrderKey(key: string): void {
   try {
@@ -59,5 +61,44 @@ export function getCreateShipmentKey(): string | null {
 export function clearCreateShipmentKey() {
   try {
     sessionStorage.removeItem(CREATE_SHIPMENT_KEY);
+  } catch {}
+}
+
+function invKey(kind: InvKind, rowId: string) {
+  return `${INV_PREFIX}:${kind}:${rowId}`;
+}
+
+export function setInventoryKey(
+  kind: InvKind,
+  rowId: string,
+  key: string,
+): void {
+  try {
+    sessionStorage.setItem(invKey(kind, rowId), key);
+  } catch {}
+}
+
+export function getInventoryKey(kind: InvKind, rowId: string): string | null {
+  try {
+    return sessionStorage.getItem(invKey(kind, rowId));
+  } catch {
+    return null;
+  }
+}
+
+export function clearInventoryKey(kind: InvKind, rowId: string): void {
+  try {
+    sessionStorage.removeItem(invKey(kind, rowId));
+  } catch {}
+}
+
+export function clearAllInventoryKeys(): void {
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i) ?? '';
+      if (k.startsWith(`${INV_PREFIX}:`)) toRemove.push(k);
+    }
+    toRemove.forEach((k) => sessionStorage.removeItem(k));
   } catch {}
 }

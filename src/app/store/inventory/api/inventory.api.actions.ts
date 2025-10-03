@@ -81,7 +81,7 @@ export const setInventoryPage = createAction(
 
 export const reserveInventory = createAction(
   '[Inventory] Reserve Inventory',
-  props<{ id: string; qty: number; orderId?: string }>()
+  props<{ id: string; qty: number; orderId?: string; idempotencyKey?: string }>()
 );
 
 export const reserveInventorySuccess = createAction(
@@ -97,7 +97,7 @@ export const reserveInventoryFailure = createAction(
 
 export const receiveInventory = createAction(
   '[Inventory] Receive Inventory',
-  props<{ id: string; qty: number; source?: string }>()
+  props<{ id: string; qty: number; source?: string; idempotencyKey?: string }>()
 );
 
 export const receiveInventorySuccess = createAction(
@@ -112,7 +112,7 @@ export const receiveInventoryFailure = createAction(
 
 export const adjustInventory = createAction(
   '[Inventory] Adjust Inventory',
-  props<{ id: string; delta: number; reason?: string }>()
+  props<{ id: string; delta: number; reason?: string; idempotencyKey?: string }>()
 );
 
 export const adjustInventorySuccess = createAction(
@@ -127,7 +127,7 @@ export const adjustInventoryFailure = createAction(
 
 export const moveInventory = createAction(
   '[Inventory] Move Inventory',
-  props<{ id: string; qty: number; fromLocation: string; toLocation: string }>()
+  props<{ id: string; qty: number; fromLocation: string; toLocation: string; idempotencyKey?: string }>()
 );
 
 export const moveInventorySuccess = createAction(
@@ -142,7 +142,7 @@ export const moveInventoryFailure = createAction(
 
 export const releaseInventory = createAction(
   '[Inventory] Release Inventory',
-  props<{ id: string; qty: number; orderId?: string }>()
+  props<{ id: string; qty: number; orderId?: string; idempotencyKey?: string }>()
 );
 
 export const releaseInventorySuccess = createAction(
