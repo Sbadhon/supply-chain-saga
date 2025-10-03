@@ -2,8 +2,9 @@ import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import * as OrdersActions from './orders.actions';
 import { OrdersService } from './orders.service';
-import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
+import { catchError, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { makeIdempotencyKey } from '../../core/http/idempotency.util';
+import { clearCreateOrderKey } from '@app/core/http/idempotency-storage.util';
 
 @Injectable()
 export class OrdersEffects {
@@ -52,6 +53,16 @@ export class OrdersEffects {
       })
     )
   );
+  
+   // On success: clear the key so the next create gets a brand-new key
+   createCleanupOnSuccess$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(OrdersActions.createOrderSuccess),
+        tap(() => clearCreateOrderKey())
+      ),
+    { dispatch: false }
+  )
   
   approve$ = createEffect(() =>
     this.actions$.pipe(
