@@ -42,11 +42,10 @@ export async function bootstrapDb() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       sku TEXT NOT NULL,
       supplier_id TEXT NOT NULL,
-      location TEXT NOT NULL,                
+      location TEXT NOT NULL,
       available_qty INT NOT NULL DEFAULT 0,
       reserved_qty  INT NOT NULL DEFAULT 0,
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
       CONSTRAINT inventory_sku_location_uk UNIQUE (sku, location)
     );
 
@@ -68,7 +67,9 @@ export async function bootstrapDb() {
     CREATE INDEX IF NOT EXISTS idx_inventory_events_type
       ON inventory_events (type);
 
-    -- transactional outbox
+    ----------------------------------------------------------------
+    -- Transactional outbox (idempotent + backoff-ready)
+    ----------------------------------------------------------------
     CREATE TABLE IF NOT EXISTS outbox (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       aggregate_type TEXT NOT NULL,
@@ -77,13 +78,46 @@ export async function bootstrapDb() {
       payload        JSONB NOT NULL,
       headers        JSONB,
       status         TEXT NOT NULL DEFAULT 'PENDING',
-      attempts       INT NOT NULL DEFAULT 0,
+      attempts       INT  NOT NULL DEFAULT 0,
       next_attempt_at TIMESTAMPTZ,
       idempotency_key TEXT,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_outbox_status_next ON outbox(status, next_attempt_at);
+
+    -- Backfill/repair (safe to run repeatedly)
+    ALTER TABLE outbox
+      ADD COLUMN IF NOT EXISTS headers JSONB;
+    ALTER TABLE outbox
+      ADD COLUMN IF NOT EXISTS attempts INT NOT NULL DEFAULT 0;
+    ALTER TABLE outbox
+      ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ;
+    ALTER TABLE outbox
+      ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+    ALTER TABLE outbox
+      ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PENDING';
+
+    -- Guard valid states
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'outbox_status_ck'
+      ) THEN
+        ALTER TABLE outbox
+          ADD CONSTRAINT outbox_status_ck
+          CHECK (status IN ('PENDING','PROCESSING','PUBLISHED','FAILED'));
+      END IF;
+    END$$;
+
+    -- Idempotency (only when key present)
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_outbox_idem
+      ON outbox(idempotency_key)
+      WHERE idempotency_key IS NOT NULL;
+
+    -- Dispatcher query uses this index
+    CREATE INDEX IF NOT EXISTS idx_outbox_status_next
+      ON outbox(status, next_attempt_at);
   `;
   await query(ddl);
 

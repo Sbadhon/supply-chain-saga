@@ -37,6 +37,9 @@ export async function bootstrapDb() {
   const ddl = `
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+    ------------------------------------------------------------
+    -- Shipments
+    ------------------------------------------------------------
     CREATE TABLE IF NOT EXISTS shipments (
       id TEXT PRIMARY KEY,
       order_id TEXT NOT NULL,
@@ -53,7 +56,23 @@ export async function bootstrapDb() {
       ON shipments(idempotency_key)
       WHERE idempotency_key IS NOT NULL;
 
-    -- event log used by addEvent()
+    -- Keep updated_at fresh on updates (no DO block, use $fn$)
+    CREATE OR REPLACE FUNCTION set_updated_at_shipments()
+    RETURNS TRIGGER AS $fn$
+    BEGIN
+      NEW.updated_at := NOW();
+      RETURN NEW;
+    END;
+    $fn$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_shipments_set_updated_at ON shipments;
+    CREATE TRIGGER trg_shipments_set_updated_at
+      BEFORE UPDATE ON shipments
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at_shipments();
+
+    ------------------------------------------------------------
+    -- Shipping events (audit log)
+    ------------------------------------------------------------
     CREATE TABLE IF NOT EXISTS shipping_events (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       shipment_id TEXT NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
@@ -66,7 +85,9 @@ export async function bootstrapDb() {
     CREATE INDEX IF NOT EXISTS idx_shipping_events_shipment_at
       ON shipping_events (shipment_id, at DESC);
 
-    -- transactional outbox
+    ------------------------------------------------------------
+    -- Transactional Outbox
+    ------------------------------------------------------------
     CREATE TABLE IF NOT EXISTS outbox (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       aggregate_type TEXT NOT NULL,
@@ -75,13 +96,39 @@ export async function bootstrapDb() {
       payload        JSONB NOT NULL,
       headers        JSONB,
       status         TEXT NOT NULL DEFAULT 'PENDING',
-      attempts       INT NOT NULL DEFAULT 0,
+      attempts       INT  NOT NULL DEFAULT 0,
       next_attempt_at TIMESTAMPTZ,
       idempotency_key TEXT,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_outbox_status_next ON outbox(status, next_attempt_at);
+
+    -- Backfill/repair if table pre-existed (safe to run repeatedly)
+    ALTER TABLE outbox ADD COLUMN IF NOT EXISTS headers JSONB;
+    ALTER TABLE outbox ADD COLUMN IF NOT EXISTS attempts INT NOT NULL DEFAULT 0;
+    ALTER TABLE outbox ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ;
+    ALTER TABLE outbox ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+    ALTER TABLE outbox ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PENDING';
+
+    -- Guard valid states (DO block is fine here; no nested $$ inside)
+    DO $guard$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'outbox_status_ck') THEN
+        ALTER TABLE outbox
+          ADD CONSTRAINT outbox_status_ck
+          CHECK (status IN ('PENDING','PROCESSING','PUBLISHED','FAILED'));
+      END IF;
+    END
+    $guard$;
+
+    -- Idempotency (only when key present)
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_outbox_idem
+      ON outbox(idempotency_key)
+      WHERE idempotency_key IS NOT NULL;
+
+    -- Dispatcher query uses this index
+    CREATE INDEX IF NOT EXISTS idx_outbox_status_next
+      ON outbox(status, next_attempt_at);
   `;
   await query(ddl);
 
@@ -93,3 +140,4 @@ export async function bootstrapDb() {
     `);
   }
 }
+

@@ -2,7 +2,7 @@ import { tx } from '../db.js';
 import * as Inv from '../models/inventory.model.js';
 import { listByInventoryId, add as addEvent } from '../models/inventory-events.model.js'; 
 import { HttpError } from '../http.js';
-import { addOutboxEvent } from '../outbox.model.js';
+import { addOutboxEvent } from '../outbox/outbox.model.js';
 
 export async function getAll() {
   return await Inv.getAll();

@@ -7,6 +7,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports: ["5434:5432"]   # host:container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d supply-chain-saga-db"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -14,10 +19,20 @@ services:
     image: redis:7
     command: ["redis-server", "--appendonly", "yes"]
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 2s
+      retries: 12
 
   nats:
     image: nats:2
     ports: ["4222:4222"]
+    healthcheck:
+      test: ["CMD", "/nats-server", "--version"]
+      interval: 10s
+      timeout: 2s
+      retries: 12
 
   # --- Services ---
   orders-svc:
@@ -33,14 +48,24 @@ services:
       DB_NAME: supply-chain-saga-db
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      NODE_ENV: development   # enable TypeORM synchronize in dev
+      NODE_ENV: development
       PORT: 3001
     depends_on:
-      - postgres
-      - redis
-      - nats
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
     ports:
       - "3001:3001"
+    healthcheck:
+      # Use Node fetch to call the service's readiness endpoint
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
 
   inventory-svc:
     build: ./inventory-svc
@@ -58,10 +83,18 @@ services:
       NODE_ENV: development
       PORT: 3002
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "3002:3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
 
   payments-svc:
     build: ./payments-svc
@@ -74,14 +107,23 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: supply-chain-saga-db
-      NODE_ENV: development   # enable TypeORM synchronize in dev
+      NODE_ENV: development
       PORT: 3003
     depends_on:
-      - postgres
-      - redis
-      - nats
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
     ports:
       - "3003:3003"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
 
   shipping-svc:
     build: ./shipping-svc
@@ -99,10 +141,18 @@ services:
       NODE_ENV: development
       PORT: 3004
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "3004:3004"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3004/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
 
   # --- Gateway (HTTP entrypoint) ---
   gateway:
@@ -113,19 +163,26 @@ services:
       INVENTORY_URL: http://inventory-svc:3002/v1/inventory
       SHIPPING_URL:  http://shipping-svc:3004/v1/shipping
       REDIS_URL: redis://redis:6379
-      # If you switch orders/payments to HTTP later, add:
+      # If switch orders/payments to HTTP later, add:
       # ORDERS_URL:   http://orders-svc:3001/v1/orders
       # PAYMENTS_URL: http://payments-svc:3003/v1/payments
     depends_on:
-      - orders-svc
-      - payments-svc
-      - inventory-svc
-      - shipping-svc
-      - nats
-      - redis
+      orders-svc:
+        condition: service_healthy
+      payments-svc:
+        condition: service_healthy
+      inventory-svc:
+        condition: service_healthy
+      shipping-svc:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "3000:3000"
 
+  # --- Outbox Workers ---
   orders-outbox:
     build: ./orders-svc
     command: npm run outbox:worker
@@ -143,8 +200,10 @@ services:
       OUTBOX_BASE_BACKOFF_MS: 1000
       NODE_ENV: development
     depends_on:
-      - postgres
-      - nats
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
 
   payments-outbox:
     build: ./payments-svc
@@ -163,12 +222,14 @@ services:
       OUTBOX_BASE_BACKOFF_MS: 1000
       NODE_ENV: development
     depends_on:
-      - postgres
-      - nats
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
 
   inventory-outbox:
     build: ./inventory-svc
-    command: node src/outbox.worker.js
+    command: node src/outbox/outbox.worker.js
     environment:
       SERVICE_NAME: inventory-svc
       NATS_URL: nats://nats:4222
@@ -183,12 +244,14 @@ services:
       OUTBOX_BASE_BACKOFF_MS: 1000
       NODE_ENV: development
     depends_on:
-      - postgres
-      - nats
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
 
   shipping-outbox:
     build: ./shipping-svc
-    command: node src/outbox.worker.js
+    command: node src/outbox/outbox.worker.js
     environment:
       SERVICE_NAME: shipping-svc
       NATS_URL: nats://nats:4222
@@ -203,11 +266,12 @@ services:
       OUTBOX_BASE_BACKOFF_MS: 1000
       NODE_ENV: development
     depends_on:
-      - postgres
-      - nats
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
 
 volumes:
   pgdata:
 
-
-#docker compose up -d --build payments-svc orders-svc inventory-svc shipping-svc gateway
+#docker compose up -d --build \ postgres redis nats \  orders-svc payments-svc inventory-svc shipping-svc \  orders-outbox payments-outbox inventory-outbox shipping-outbox \  gateway

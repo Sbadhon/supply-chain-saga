@@ -3,7 +3,7 @@ import { tx } from '../db.js';
 import * as shippingModel from '../models/shipping.model.js';
 import { HttpError } from '../http.js';
 import { add as addEvent } from '../models/shipping-events.model.js';
-import { addOutboxEvent } from '../outbox.model.js';
+import { addOutboxEvent } from '../outbox/outbox.model.js';
 
 export async function getAll() {
   return await shippingModel.getAll();

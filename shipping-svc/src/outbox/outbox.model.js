@@ -1,4 +1,4 @@
-import { query } from './db.js';
+import { query } from '../db.js';
 
 /** Enqueue an outbox event INSIDE the same DB transaction (use the tx's client). */
 export async function addOutboxEvent(client, ev) {

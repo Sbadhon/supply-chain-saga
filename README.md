@@ -76,7 +76,7 @@ NgRx frontend — Angular app consuming the gateway’s REST API.
 
 ## Quick Start
 # Clone
-git clone https://github.com/yourname/supplychain-saga.git
+git clone https://github.com/Sbadhon/supply-chain-saga
 cd supplychain-saga
 
 # Run with Docker (builds images on first run)
