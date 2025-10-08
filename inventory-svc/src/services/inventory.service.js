@@ -2,10 +2,7 @@ import { tx } from '../db.js';
 import * as Inv from '../models/inventory.model.js';
 import { listByInventoryId, add as addEvent } from '../models/inventory-events.model.js'; 
 import { HttpError } from '../http.js';
-
-/* ======================
- * Reads
- * ====================== */
+import { addOutboxEvent } from '../outbox.model.js';
 
 export async function getAll() {
   return await Inv.getAll();
@@ -16,11 +13,8 @@ export async function getInventory(sku) {
   return await Inv.getBySku(null, sku); // MAIN
 }
 
-/* ======================
- * Reserve / Commit / Release (by sku + location)
- * ====================== */
-
-export async function reserveStock({ orderId, sku, quantity, location = 'MAIN' }) {
+// Reserve / Commit / Release (by sku + location)
+export async function reserveStock({ orderId, sku, quantity, location = 'MAIN', traceId, idempotencyKey }) {
   if (!orderId || !sku || !Number.isInteger(quantity) || quantity <= 0) {
     throw new HttpError(400, 'Invalid payload');
   }
@@ -46,6 +40,16 @@ export async function reserveStock({ orderId, sku, quantity, location = 'MAIN' }
       meta: { orderId, location },
     });
 
+    // OUTBOX: InventoryReserved
+    await addOutboxEvent(client, {
+      aggregateType: 'Inventory',
+      aggregateId: row.id,
+      type: 'InventoryReserved',
+      payload: { orderId, sku, quantity, location, after: { available_qty: updated.available_qty, reserved_qty: updated.reserved_qty } },
+      headers: { traceId },
+      idempotencyKey: idempotencyKey ?? null,
+    });
+
     return {
       success: true,
       orderId,
@@ -58,7 +62,7 @@ export async function reserveStock({ orderId, sku, quantity, location = 'MAIN' }
   });
 }
 
-export async function commitReservation({ orderId, sku, quantity, location = 'MAIN' }) {
+export async function commitReservation({ orderId, sku, quantity, location = 'MAIN', traceId, idempotencyKey }) {
   if (!orderId || !sku || !Number.isInteger(quantity) || quantity <= 0) {
     throw new HttpError(400, 'Invalid payload');
   }
@@ -81,6 +85,16 @@ export async function commitReservation({ orderId, sku, quantity, location = 'MA
       meta: { orderId, location },
     });
 
+    // OUTBOX: InventoryCommitted
+    await addOutboxEvent(client, {
+      aggregateType: 'Inventory',
+      aggregateId: row.id,
+      type: 'InventoryCommitted',
+      payload: { orderId, sku, quantity, location, after: { available_qty: updated.available_qty, reserved_qty: updated.reserved_qty } },
+      headers: { traceId },
+      idempotencyKey: idempotencyKey ?? null,
+    });
+
     return {
       success: true,
       orderId,
@@ -93,7 +107,7 @@ export async function commitReservation({ orderId, sku, quantity, location = 'MA
   });
 }
 
-export async function releaseReservation({ orderId, sku, quantity, location = 'MAIN' }) {
+export async function releaseReservation({ orderId, sku, quantity, location = 'MAIN', traceId, idempotencyKey }) {
   if (!orderId || !sku || !Number.isInteger(quantity) || quantity <= 0) {
     throw new HttpError(400, 'Invalid payload');
   }
@@ -119,6 +133,16 @@ export async function releaseReservation({ orderId, sku, quantity, location = 'M
       meta: { orderId, location },
     });
 
+    // OUTBOX: InventoryReleased
+    await addOutboxEvent(client, {
+      aggregateType: 'Inventory',
+      aggregateId: row.id,
+      type: 'InventoryReleased',
+      payload: { orderId, sku, quantity, location, after: { available_qty: updated.available_qty, reserved_qty: updated.reserved_qty } },
+      headers: { traceId },
+      idempotencyKey: idempotencyKey ?? null,
+    });
+
     return {
       success: true,
       orderId,
@@ -131,16 +155,15 @@ export async function releaseReservation({ orderId, sku, quantity, location = 'M
   });
 }
 
-/* ======================
- * Adjust (by sku + location)
- * ====================== */
-
+// Adjust (by sku + location)
 export async function adjustStock({
   sku,
   location = 'MAIN',
   availableDelta = 0,
   reservedDelta = 0,
   reason,
+  traceId,
+  idempotencyKey,
 }) {
   const hasAvail = Number.isInteger(availableDelta);
   const hasRes = Number.isInteger(reservedDelta);
@@ -163,6 +186,23 @@ export async function adjustStock({
       meta: { reason, location, availableDelta, reservedDelta },
     });
 
+    // OUTBOX: InventoryAdjusted
+    await addOutboxEvent(client, {
+      aggregateType: 'Inventory',
+      aggregateId: row.id,
+      type: 'InventoryAdjusted',
+      payload: {
+        sku,
+        location,
+        availableDelta: hasAvail ? availableDelta : 0,
+        reservedDelta: hasRes ? reservedDelta : 0,
+        reason: reason ?? null,
+        after: { available_qty: updated.available_qty, reserved_qty: updated.reserved_qty },
+      },
+      headers: { traceId },
+      idempotencyKey: idempotencyKey ?? null,
+    });
+
     return {
       success: true,
       sku,
@@ -173,11 +213,8 @@ export async function adjustStock({
   });
 }
 
-/* ======================
- * Move (by id: from row id → to location)
- * ====================== */
-
-export async function moveStock({ id, qty, toLocation, fromLocation }) {
+// Move (by id: from row id → to location)
+export async function moveStock({ id, qty, toLocation, fromLocation, traceId, idempotencyKey }) {
   if (!id || !Number.isFinite(qty) || qty <= 0 || !toLocation) {
     throw new HttpError(400, 'Invalid payload: { id, positive qty, toLocation } required');
   }
@@ -227,6 +264,25 @@ export async function moveStock({ id, qty, toLocation, fromLocation }) {
       meta: { fromLocation: from.location, toLocation },
     });
 
+    // OUTBOX: InventoryMoved
+    await addOutboxEvent(client, {
+      aggregateType: 'Inventory',
+      aggregateId: from.id,
+      type: 'InventoryMoved',
+      payload: {
+        sku: from.sku,
+        qty,
+        fromLocation: from.location,
+        toLocation,
+        after: {
+          from: { id: fromUpdated.id, available_qty: fromUpdated.available_qty, reserved_qty: fromUpdated.reserved_qty },
+          to:   { id: toUpdated.id,   available_qty: toUpdated.available_qty,   reserved_qty: toUpdated.reserved_qty   },
+        },
+      },
+      headers: { traceId },
+      idempotencyKey: idempotencyKey ?? null,
+    });
+
     return {
       success: true,
       sku: from.sku,
@@ -247,10 +303,7 @@ export async function moveStock({ id, qty, toLocation, fromLocation }) {
   });
 }
 
-/* ======================
- * Quick View History
- * ====================== */
-
+// Quick View History
 export async function quickViewHistory({ id, limit = 20, cursor }) {
   if (!id) throw new HttpError(400, 'Missing inventory id');
   const lim = Math.min(Number(limit ?? 20), 100);

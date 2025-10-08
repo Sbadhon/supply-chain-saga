@@ -43,20 +43,17 @@ export async function bootstrapDb() {
       status TEXT NOT NULL,
       label_url TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      idempotency_key TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_shipments_order_id ON shipments(order_id);
-    
-    ALTER TABLE shipments
-      ADD COLUMN IF NOT EXISTS idempotency_key TEXT NULL;
 
-    -- Only enforce uniqueness when key is present
     CREATE UNIQUE INDEX IF NOT EXISTS uq_shipments_idem
       ON shipments(idempotency_key)
       WHERE idempotency_key IS NOT NULL;
 
-    -- optional: events table used by addEvent()
+    -- event log used by addEvent()
     CREATE TABLE IF NOT EXISTS shipping_events (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       shipment_id TEXT NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
@@ -66,9 +63,25 @@ export async function bootstrapDb() {
       meta JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-
     CREATE INDEX IF NOT EXISTS idx_shipping_events_shipment_at
       ON shipping_events (shipment_id, at DESC);
+
+    -- transactional outbox
+    CREATE TABLE IF NOT EXISTS outbox (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      aggregate_type TEXT NOT NULL,
+      aggregate_id   TEXT NOT NULL,
+      type           TEXT NOT NULL,
+      payload        JSONB NOT NULL,
+      headers        JSONB,
+      status         TEXT NOT NULL DEFAULT 'PENDING',
+      attempts       INT NOT NULL DEFAULT 0,
+      next_attempt_at TIMESTAMPTZ,
+      idempotency_key TEXT,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_outbox_status_next ON outbox(status, next_attempt_at);
   `;
   await query(ddl);
 

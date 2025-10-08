@@ -8,6 +8,7 @@ import {
   import { DataSource, Repository } from 'typeorm';
   import { Payment, PaymentStatusEnum } from './entities/payment.entity';
   import { CreatePaymentDto } from './dto/create-payment.dto';
+import { OutboxService } from 'src/outbox/outbox.service';
   
   type PaymentEventDto = {
     id: string;
@@ -23,6 +24,7 @@ import {
     constructor(
       @InjectRepository(Payment) private readonly repo: Repository<Payment>,
       @InjectDataSource() private readonly ds: DataSource,
+      private readonly outbox: OutboxService,
     ) {}
   
     async create(dto: CreatePaymentDto, idempotencyKey?: string): Promise<Payment> {
@@ -109,6 +111,36 @@ import {
         PaymentStatusEnum.CANCELED,
         PaymentStatusEnum.DISPUTED,
       ].includes(s);
+    }
+
+    async capture(orderId: string, amount: number, idempotencyKey?: string, traceId?: string) {
+      if (!idempotencyKey) throw new BadRequestException('Missing Idempotency-Key');
+  
+      return this.ds.transaction(async (trx) => {
+        const repo = trx.getRepository(Payment);
+  
+        // Do payment gateway call, persist row, mark as CAPTURED...
+        let payment = repo.create({
+          orderId,
+          amount,
+          status: 'CAPTURED',
+          idempotencyKey,
+        } as Payment);
+        await repo.save(payment);
+        const p = await this.repo.findOne({ where: { id: payment.id } });
+        if (!p) throw new NotFoundException('Payment not found');
+  
+        await this.outbox.enqueue(trx, {
+          aggregateType: 'Payment',
+          aggregateId: p.id,
+          type: 'PaymentCaptured',
+          payload: { paymentId: p.id, orderId, amount, status: p.status },
+          headers: { traceId, idempotencyKey },
+          idempotencyKey,
+        });
+  
+        return p;
+      });
     }
   }
   

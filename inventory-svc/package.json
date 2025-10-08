@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "build": "echo \"nothing to build\""
+    "build": "echo \"nothing to build\"",
+    "outbox:worker": "node src/outbox.worker.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

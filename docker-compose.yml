@@ -6,7 +6,7 @@ services:
       POSTGRES_DB: supply-chain-saga-db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports: ["5434:5432"]     # host:container
+    ports: ["5434:5432"]   # host:container
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -125,6 +125,86 @@ services:
       - redis
     ports:
       - "3000:3000"
+
+  orders-outbox:
+    build: ./orders-svc
+    command: npm run outbox:worker
+    environment:
+      SERVICE_NAME: orders-svc
+      NATS_URL: nats://nats:4222
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: supply-chain-saga-db
+      OUTBOX_DISPATCH_INTERVAL_MS: 1000
+      OUTBOX_BATCH_SIZE: 50
+      OUTBOX_MAX_ATTEMPTS: 20
+      OUTBOX_BASE_BACKOFF_MS: 1000
+      NODE_ENV: development
+    depends_on:
+      - postgres
+      - nats
+
+  payments-outbox:
+    build: ./payments-svc
+    command: npm run outbox:worker
+    environment:
+      SERVICE_NAME: payments-svc
+      NATS_URL: nats://nats:4222
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: supply-chain-saga-db
+      OUTBOX_DISPATCH_INTERVAL_MS: 1000
+      OUTBOX_BATCH_SIZE: 50
+      OUTBOX_MAX_ATTEMPTS: 20
+      OUTBOX_BASE_BACKOFF_MS: 1000
+      NODE_ENV: development
+    depends_on:
+      - postgres
+      - nats
+
+  inventory-outbox:
+    build: ./inventory-svc
+    command: node src/outbox.worker.js
+    environment:
+      SERVICE_NAME: inventory-svc
+      NATS_URL: nats://nats:4222
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: supply-chain-saga-db
+      OUTBOX_DISPATCH_INTERVAL_MS: 1000
+      OUTBOX_BATCH_SIZE: 50
+      OUTBOX_MAX_ATTEMPTS: 20
+      OUTBOX_BASE_BACKOFF_MS: 1000
+      NODE_ENV: development
+    depends_on:
+      - postgres
+      - nats
+
+  shipping-outbox:
+    build: ./shipping-svc
+    command: node src/outbox.worker.js
+    environment:
+      SERVICE_NAME: shipping-svc
+      NATS_URL: nats://nats:4222
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: supply-chain-saga-db
+      OUTBOX_DISPATCH_INTERVAL_MS: 1000
+      OUTBOX_BATCH_SIZE: 50
+      OUTBOX_MAX_ATTEMPTS: 20
+      OUTBOX_BASE_BACKOFF_MS: 1000
+      NODE_ENV: development
+    depends_on:
+      - postgres
+      - nats
 
 volumes:
   pgdata:

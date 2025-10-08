@@ -4,7 +4,6 @@ import * as svc from "../services/inventory.service.js";
 export async function getAll(_req, res, next) {
   try {
     const rows = await svc.getAll();
-    // Empty array is a valid response
     res.json(rows ?? []);
   } catch (error) {
     next(error);
@@ -22,13 +21,19 @@ export async function getBySku(req, res, next) {
   }
 }
 
+function pickIdem(h = {}) {
+  return h['idempotency-key']
+      || h['x-idempotency-key']
+      || h['Idempotency-Key']
+      || h['X-Idempotency-Key'];
+}
+
 /** POST /v1/inventory/reserve  { orderId, sku, quantity, location? } */
 export async function reserve(req, res, next) {
   try {
-    console.log(
-      `[traceId=${req.traceId}] inventory.reserve sku=${req.body?.sku} qty=${req.body?.quantity}`
-    );
-    const out = await svc.reserveStock(req.body);
+    const idempotencyKey = pickIdem(req.headers);
+    const traceId = req.traceId;
+    const out = await svc.reserveStock({ ...req.body, traceId, idempotencyKey });
     if (!out.success) return res.status(409).json(out);
     res.status(201).json(out);
   } catch (error) {
@@ -39,7 +44,9 @@ export async function reserve(req, res, next) {
 /** POST /v1/inventory/commit  { orderId, sku, quantity, location? } */
 export async function commit(req, res, next) {
   try {
-    const out = await svc.commitReservation(req.body);
+    const idempotencyKey = pickIdem(req.headers);
+    const traceId = req.traceId;
+    const out = await svc.commitReservation({ ...req.body, traceId, idempotencyKey });
     if (!out.success) return res.status(409).json(out);
     res.json(out);
   } catch (error) {
@@ -50,7 +57,9 @@ export async function commit(req, res, next) {
 /** POST /v1/inventory/release  { orderId, sku, quantity, location? } */
 export async function release(req, res, next) {
   try {
-    const out = await svc.releaseReservation(req.body);
+    const idempotencyKey = pickIdem(req.headers);
+    const traceId = req.traceId;
+    const out = await svc.releaseReservation({ ...req.body, traceId, idempotencyKey });
     if (!out.success) return res.status(409).json(out);
     res.json(out);
   } catch (error) {
@@ -61,7 +70,9 @@ export async function release(req, res, next) {
 /** POST /v1/inventory/adjust  { sku, location?, availableDelta?, reservedDelta?, reason? } */
 export async function adjust(req, res, next) {
   try {
-    const out = await svc.adjustStock(req.body);
+    const idempotencyKey = pickIdem(req.headers);
+    const traceId = req.traceId;
+    const out = await svc.adjustStock({ ...req.body, traceId, idempotencyKey });
     res.json(out);
   } catch (error) {
     next(error);
@@ -71,7 +82,9 @@ export async function adjust(req, res, next) {
 /** POST /v1/inventory/move  { id, qty, toLocation, fromLocation? } */
 export async function move(req, res, next) {
   try {
-    const out = await svc.moveStock(req.body);
+    const idempotencyKey = pickIdem(req.headers);
+    const traceId = req.traceId;
+    const out = await svc.moveStock({ ...req.body, traceId, idempotencyKey });
     res.json(out);
   } catch (error) {
     next(error);

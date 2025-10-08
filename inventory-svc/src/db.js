@@ -67,10 +67,26 @@ export async function bootstrapDb() {
       ON inventory_events (inventory_id, at DESC);
     CREATE INDEX IF NOT EXISTS idx_inventory_events_type
       ON inventory_events (type);
+
+    -- transactional outbox
+    CREATE TABLE IF NOT EXISTS outbox (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      aggregate_type TEXT NOT NULL,
+      aggregate_id   TEXT NOT NULL,
+      type           TEXT NOT NULL,
+      payload        JSONB NOT NULL,
+      headers        JSONB,
+      status         TEXT NOT NULL DEFAULT 'PENDING',
+      attempts       INT NOT NULL DEFAULT 0,
+      next_attempt_at TIMESTAMPTZ,
+      idempotency_key TEXT,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_outbox_status_next ON outbox(status, next_attempt_at);
   `;
   await query(ddl);
 
-  // Dev seed (safe to run repeatedly)
   if ((process.env.NODE_ENV || 'development') === 'development') {
     await query(
       `
@@ -86,3 +102,4 @@ export async function bootstrapDb() {
     );
   }
 }
+

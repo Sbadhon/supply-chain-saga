@@ -46,3 +46,13 @@ export async function cancel(req, res, next) {
     next(error);
   }
 }
+
+export async function ship(req, res, next) {
+  try {
+    const { id } = req.body || {};
+    const updated = await svc.markShipped({ id });
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+}
