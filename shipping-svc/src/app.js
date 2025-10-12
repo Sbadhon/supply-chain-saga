@@ -6,6 +6,7 @@ import { idempotency } from './middleware/idempotency.js';
 import shippingRoutes from './routes/shipping.routes.js';
 import { errorHandler } from './common/error.js';
 import healthRoutes from './routes/health.routes.js';
+import { mountSwagger } from './swagger.js';
 
 const app = express();
 app.use(helmet());
@@ -14,6 +15,8 @@ app.use(express.json());
 
 app.use(tracing());
 app.use(idempotency());
+
+mountSwagger(app);
 
 app.use('/v1/health', healthRoutes);
 app.use('/v1/shipping', shippingRoutes);
