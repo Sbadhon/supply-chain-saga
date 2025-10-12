@@ -25,7 +25,9 @@ export class NatsPublisher {
   async close(): Promise<void> {
     try {
       await this.nc?.drain();
-    } catch {}
+    } catch {
+      /* empty */
+    }
     this.nc = null;
   }
 }

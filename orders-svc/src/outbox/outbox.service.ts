@@ -12,10 +12,16 @@ const SERVICE_NAME = process.env.SERVICE_NAME || 'orders-svc';
 export class OutboxService {
   private readonly logger = new Logger(OutboxService.name);
 
-  constructor(private readonly ds: DataSource, private readonly pub: NatsPublisher) {}
+  constructor(
+    private readonly ds: DataSource,
+    private readonly pub: NatsPublisher,
+  ) {}
 
   // Call this **inside** the same transaction that mutates domain state.
-  async enqueue(trx: EntityManager, ev: Omit<Partial<OutboxEvent>, 'status' | 'attempts'>) {
+  async enqueue(
+    trx: EntityManager,
+    ev: Omit<Partial<OutboxEvent>, 'status' | 'attempts'>,
+  ) {
     const repo = trx.getRepository(OutboxEvent);
     const row = repo.create({
       status: 'PENDING',
@@ -76,15 +82,25 @@ export class OutboxService {
           await this.markPublished(ev.id);
           published++;
         } catch (err) {
-          this.logger.error(`Publish failed for outbox ${ev.id}: ${(err as Error).message}`);
+          this.logger.error(
+            `Publish failed for outbox ${ev.id}: ${(err as Error).message}`,
+          );
           await this.markFailed(ev.id, ev.attempts ?? 0);
         }
       }
       return published;
-    } catch (e) {
-      this.logger.error('dispatchOnce tx error', e as any);
-      try { await qr.rollbackTransaction(); } catch {}
-      try { await qr.release(); } catch {}
+    } catch (err) {
+      this.logger.error('dispatchOnce tx error', err);
+      try {
+        await qr.rollbackTransaction();
+      } catch {
+        /* empty */
+      }
+      try {
+        await qr.release();
+      } catch {
+        /* empty */
+      }
       return 0;
     }
   }

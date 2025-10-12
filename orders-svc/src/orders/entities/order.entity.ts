@@ -1,18 +1,26 @@
-import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { OrderItem } from './order-item.entity';
 
-export enum OrderStatusEnum { 
-  PENDING='PENDING', 
-  RESERVED='RESERVED',
-  PAID='PAID', 
-  SHIPPED='SHIPPED', 
-  CANCELED='CANCELED' 
+export enum OrderStatusEnum {
+  PENDING = 'PENDING',
+  RESERVED = 'RESERVED',
+  PAID = 'PAID',
+  SHIPPED = 'SHIPPED',
+  CANCELED = 'CANCELED',
 }
 
 @Entity('orders')
 @Index('uq_orders_idempotency_key', ['idempotencyKey'], {
   unique: true,
-  where: '"idempotency_key" IS NOT NULL'
+  where: '"idempotency_key" IS NOT NULL',
 })
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -22,13 +30,22 @@ export class Order {
   @Column({ type: 'varchar', nullable: true })
   customerId?: string | null;
 
-  @Column({ name: 'idempotency_key', type: 'varchar', length: 64, nullable: true })
+  @Column({
+    name: 'idempotency_key',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
   idempotencyKey?: string | null;
-  
+
   @Column({ type: 'jsonb', nullable: true })
   metadata?: any;
 
-  @Column({ type: 'enum', enum: OrderStatusEnum, default: OrderStatusEnum.PENDING })
+  @Column({
+    type: 'enum',
+    enum: OrderStatusEnum,
+    default: OrderStatusEnum.PENDING,
+  })
   status: OrderStatusEnum;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: false }) // we'll save items separately

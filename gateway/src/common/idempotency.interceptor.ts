@@ -1,25 +1,45 @@
 import {
-  BadRequestException, ConflictException, Injectable, NestInterceptor, ExecutionContext, CallHandler
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
 } from '@nestjs/common';
-import { Observable, from, of, switchMap, tap } from 'rxjs';
+import type { Request, Response } from 'express';
+import { from, of, Observable } from 'rxjs';
+import { switchMap, map } from 'rxjs/operators';
 import { IDEMPOTENCY_KEY_HEADER } from './tracing.constants';
 import { IdempotencyService } from './idempotency.service';
 
-const UNSAFE = new Set(['POST','PUT','PATCH','DELETE']);
+type UnsafeMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+const UNSAFE_METHODS: ReadonlySet<UnsafeMethod> = new Set([
+  'POST',
+  'PUT',
+  'PATCH',
+  'DELETE',
+]);
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   constructor(private readonly idem: IdempotencyService) {}
 
-  intercept(ctx: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    ctx: ExecutionContext,
+    next: CallHandler<unknown>,
+  ): Observable<unknown> {
     const http = ctx.switchToHttp();
-    const req = http.getRequest();
-    const res = http.getResponse();
+    const req = http.getRequest<Request>();
+    const res = http.getResponse<Response>();
 
-    if (!UNSAFE.has(req.method)) return next.handle();
+    if (!UNSAFE_METHODS.has(req.method as UnsafeMethod)) {
+      return next.handle();
+    }
 
     const key = req.header(IDEMPOTENCY_KEY_HEADER);
-    if (!key) throw new BadRequestException(`Missing ${IDEMPOTENCY_KEY_HEADER} header`);
+    if (!key) {
+      throw new BadRequestException(`Missing ${IDEMPOTENCY_KEY_HEADER} header`);
+    }
 
     const route = (req.originalUrl || req.url || '').split('?')[0];
     const reqHash = this.idem.reqHash(req.body);
@@ -27,25 +47,40 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return from(this.idem.reserve(req.method, route, key, reqHash)).pipe(
       switchMap((r) => {
         if (r.kind === 'hash_conflict') {
-          throw new ConflictException('Idempotency-Key already used with a different request body');
+          throw new ConflictException(
+            'Idempotency-Key already used with a different request body',
+          );
         }
+
         if (r.kind === 'already_done' && r.record) {
           res.status(r.record.status ?? 200);
           return of(r.record.body);
         }
+
         if (r.kind === 'already_pending') {
-          // Another request with same key is in-flight. return 409 or 202.
-          throw new ConflictException('Request with the same Idempotency-Key is already processing');
+          throw new ConflictException(
+            'Request with the same Idempotency-Key is already processing',
+          );
         }
 
         // Reserved the key; proceed and then finalize
-        return next.handle().pipe(
-          tap(async (responseBody) => {
-            const status = res.statusCode ?? 200;
-            await this.idem.finalize(req.method, route, key, reqHash, status, responseBody);
-          })
-        );
-      })
+        return next
+          .handle()
+          .pipe(
+            switchMap((responseBody) =>
+              from(
+                this.idem.finalize(
+                  req.method,
+                  route,
+                  key,
+                  reqHash,
+                  res.statusCode ?? 200,
+                  responseBody,
+                ),
+              ).pipe(map(() => responseBody)),
+            ),
+          );
+      }),
     );
   }
 }

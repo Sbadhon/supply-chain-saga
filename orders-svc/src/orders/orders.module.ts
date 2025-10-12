@@ -11,7 +11,14 @@ import { OutboxService } from 'src/outbox/outbox.service';
 import { OrderCommitProgress } from './entities/order-commit-progress.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, OrderItem, OrderCommitProgress, OutboxEvent])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Order,
+      OrderItem,
+      OrderCommitProgress,
+      OutboxEvent,
+    ]),
+  ],
   controllers: [OrdersController, OrdersMessageController],
   providers: [OrdersService, OutboxService, NatsPublisher],
   exports: [TypeOrmModule, OutboxService],

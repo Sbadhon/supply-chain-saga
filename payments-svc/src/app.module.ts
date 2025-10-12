@@ -8,9 +8,9 @@ import { HealthModule } from './health/health.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot(AppDataSource.options as any),
+    TypeOrmModule.forRoot(AppDataSource.options),
     PaymentsModule,
-    HealthModule
+    HealthModule,
   ],
 })
 export class AppModule {}

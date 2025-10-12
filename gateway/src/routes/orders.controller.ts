@@ -1,69 +1,98 @@
-import { Controller, Get, Post, Body, Param, Inject, Req, Headers } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Inject,
+  Req,
+  Headers,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import type { Request } from 'express';
+import type { IncomingHttpHeaders } from 'http';
+
+const ORDERS_CLIENT = 'ORDERS' as const;
+
+interface TraceRequest extends Request {
+  traceId?: string;
+}
+
+function pickIdempotencyKey(h: IncomingHttpHeaders): string | undefined {
+  const get = (k: string) => {
+    const v = h[k.toLowerCase()];
+    return Array.isArray(v) ? v[0] : v;
+  };
+  return get('idempotency-key') ?? get('x-idempotency-key');
+}
 
 @Controller('orders')
 export class OrdersController {
-  constructor(@Inject('ORDERS') private readonly orders: ClientProxy) {}
+  constructor(@Inject(ORDERS_CLIENT) private readonly orders: ClientProxy) {}
 
   @Get()
-  getAll(@Req() req: any) {
-    return firstValueFrom(this.orders.send('orders.getAll', { traceId: req.traceId }));
+  getAll(@Req() req: TraceRequest): Promise<unknown> {
+    return firstValueFrom(
+      this.orders.send('orders.getAll', { traceId: req.traceId }),
+    );
   }
 
   @Get(':id')
-  getById(@Param('id') id: string, @Req() req: any) {
-    return firstValueFrom(this.orders.send('orders.getById', { id, traceId: req.traceId }));
+  getById(@Param('id') id: string, @Req() req: TraceRequest): Promise<unknown> {
+    return firstValueFrom(
+      this.orders.send('orders.getById', { id, traceId: req.traceId }),
+    );
   }
 
   @Post()
   create(
-    @Body() dto: any,
-    @Req() req: any,
-    @Headers() headers: Record<string, string | undefined>,
-  ) {
-    const idempotencyKey =
-      headers['idempotency-key'] ||
-      headers['x-idempotency-key'] ||
-      headers['Idempotency-Key'] ||
-      headers['X-Idempotency-Key'];
+    @Body() dto: unknown,
+    @Req() req: TraceRequest,
+    @Headers() headers: IncomingHttpHeaders,
+  ): Promise<unknown> {
+    const idempotencyKey = pickIdempotencyKey(headers);
 
     return firstValueFrom(
-      this.orders.send('orders.create', { dto, traceId: req.traceId, idempotencyKey })
+      this.orders.send('orders.create', {
+        dto,
+        traceId: req.traceId,
+        idempotencyKey,
+      }),
     );
   }
 
   @Post(':id/approve')
   approve(
     @Param('id') id: string,
-    @Req() req: any,
-    @Headers() headers: Record<string, string | undefined>,
-  ) {
-    const idempotencyKey =
-      headers['idempotency-key'] ||
-      headers['x-idempotency-key'] ||
-      headers['Idempotency-Key'] ||
-      headers['X-Idempotency-Key'];
+    @Req() req: TraceRequest,
+    @Headers() headers: IncomingHttpHeaders,
+  ): Promise<unknown> {
+    const idempotencyKey = pickIdempotencyKey(headers);
 
     return firstValueFrom(
-      this.orders.send('orders.approve', { id, traceId: req.traceId, idempotencyKey })
+      this.orders.send('orders.approve', {
+        id,
+        traceId: req.traceId,
+        idempotencyKey,
+      }),
     );
   }
 
   @Post(':id/cancel')
   cancel(
     @Param('id') id: string,
-    @Req() req: any,
-    @Headers() headers: Record<string, string | undefined>,
-  ) {
-    const idempotencyKey =
-      headers['idempotency-key'] ||
-      headers['x-idempotency-key'] ||
-      headers['Idempotency-Key'] ||
-      headers['X-Idempotency-Key'];
+    @Req() req: TraceRequest,
+    @Headers() headers: IncomingHttpHeaders,
+  ): Promise<unknown> {
+    const idempotencyKey = pickIdempotencyKey(headers);
 
     return firstValueFrom(
-      this.orders.send('orders.cancel', { id, traceId: req.traceId, idempotencyKey })
+      this.orders.send('orders.cancel', {
+        id,
+        traceId: req.traceId,
+        idempotencyKey,
+      }),
     );
   }
 }

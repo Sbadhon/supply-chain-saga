@@ -7,6 +7,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 @Controller('v1/health')
 export class HealthController {
   private readonly service = process.env.SERVICE_NAME || 'nest-svc';
+
   constructor(private readonly ds: DataSource) {}
 
   @Get('live')
@@ -36,11 +37,18 @@ export class HealthController {
         deps: { db: { ok: true } },
         now: new Date().toISOString(),
       };
-    } catch (e: any) {
+    } catch (err) {
+      const error =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : String(err);
+
       return {
         status: 'DEGRADED',
         service: this.service,
-        deps: { db: { ok: false, error: e?.message ?? String(e) } },
+        deps: { db: { ok: false, error } },
         now: new Date().toISOString(),
       };
     }
@@ -50,14 +58,21 @@ export class HealthController {
   @ApiOperation({ summary: 'Verbose health' })
   @ApiOkResponse({ description: 'Aggregated health info' })
   async full() {
-    let dbOk = true,
-      dbErr: string | undefined;
+    let dbOk = true;
+    let dbErr: string | undefined;
+
     try {
       await this.ds.query('SELECT 1');
-    } catch (e: any) {
+    } catch (err) {
       dbOk = false;
-      dbErr = e?.message ?? String(e);
+      dbErr =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : String(err);
     }
+
     return {
       status: dbOk ? 'UP' : 'ISSUES',
       service: this.service,

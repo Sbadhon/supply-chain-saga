@@ -1,42 +1,42 @@
 import { Expose } from 'class-transformer';
 
 export class PaymentResponseDto {
-  @Expose() 
+  @Expose()
   id!: string;
 
-  @Expose() 
+  @Expose()
   orderId!: string;
 
-  @Expose() 
+  @Expose()
   amount!: number;
 
-  @Expose() 
+  @Expose()
   currency!: string;
 
-  @Expose() 
+  @Expose()
   status!: string;
 
-  @Expose() a
+  @Expose() a;
   uthorizedAmount?: number | null;
 
-  @Expose() 
+  @Expose()
   capturedAmount?: number | null;
 
-  @Expose() 
+  @Expose()
   refundedAmount?: number | null;
 
-  @Expose() 
+  @Expose()
   methodSummary?: string | null;
 
-  @Expose() 
+  @Expose()
   provider?: string | null;
 
   @Expose()
   providerPaymentId?: string | null;
 
-  @Expose() 
+  @Expose()
   createdAt!: Date;
 
-  @Expose() 
+  @Expose()
   updatedAt!: Date;
 }

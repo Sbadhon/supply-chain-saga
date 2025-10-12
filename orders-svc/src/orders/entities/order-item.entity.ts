@@ -33,9 +33,9 @@ export class OrderItem {
   @Column({ type: 'text', nullable: true })
   supplierId?: string | null;
 
-  @CreateDateColumn() 
+  @CreateDateColumn()
   createdAt: Date;
-  
-  @UpdateDateColumn() 
+
+  @UpdateDateColumn()
   updatedAt: Date;
 }

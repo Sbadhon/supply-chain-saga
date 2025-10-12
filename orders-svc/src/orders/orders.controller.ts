@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -20,6 +21,24 @@ import {
   ApiTags,
   ApiHeader,
 } from '@nestjs/swagger';
+
+function normalizeHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): Record<string, string | undefined> {
+  const out: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(headers)) {
+    const key = k.toLowerCase();
+    out[key] = Array.isArray(v) ? v[0] : v;
+  }
+  return out;
+}
+
+function readTraceId(
+  lower: Record<string, string | undefined>,
+): string | undefined {
+  // support both x-trace-id and trace-id variants
+  return lower['x-trace-id'] ?? lower['trace-id'];
+}
 
 @ApiTags('orders')
 @Controller('v1/orders')
@@ -37,9 +56,13 @@ export class OrdersController {
   @ApiCreatedResponse({ description: 'Order created', type: OrderResponseDto })
   async create(
     @Body() dto: CreateOrderDto,
-    @Headers('idempotency-key') idemKey?: string,
+    @Headers() rawHeaders: Record<string, string | string[] | undefined>,
   ): Promise<OrderResponseDto> {
-    const order = await this.ordersService.create(dto, idemKey);
+    const headers = normalizeHeaders(rawHeaders);
+    const idemKey = headers['idempotency-key'];
+    const traceId = readTraceId(headers);
+
+    const order = await this.ordersService.create(dto, idemKey, traceId);
     return plainToInstance(OrderResponseDto, order, {
       excludeExtraneousValues: true,
     });
@@ -72,22 +95,21 @@ export class OrdersController {
   @ApiOperation({ summary: 'Approve order' })
   @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiHeader({
-    name: 'X-Trace-Id',
-    description: 'Unique request trace identifier for distributed tracing.',
-    required: false,
+    name: 'Idempotency-Key',
+    description: 'Required for idempotent approve.',
+    required: true,
   })
   @ApiOkResponse({ description: 'Order approved', type: OrderResponseDto })
   async approve(
     @Param('id') id: string,
-    @Headers('x-trace-id') traceIdLower?: string,
-    @Headers('trace-id') traceIdAltLower?: string,
-    @Headers('X-Trace-Id') traceId?: string,
-    @Headers('Trace-Id') traceIdAlt?: string,
+    @Headers() rawHeaders: Record<string, string | string[] | undefined>,
   ): Promise<OrderResponseDto> {
-    const traceIdValue =
-      traceIdLower || traceIdAltLower || traceId || traceIdAlt;
-    console.log(`[approve] traceId=${traceIdValue ?? '(none)'}`);
-    const order = await this.ordersService.approve(id, traceIdValue);
+    const headers = normalizeHeaders(rawHeaders);
+    const idemKey = headers['idempotency-key'];
+    if (!idemKey) throw new BadRequestException('Missing Idempotency-Key');
+
+    const traceId = readTraceId(headers);
+    const order = await this.ordersService.approve(id, idemKey, traceId);
     return plainToInstance(OrderResponseDto, order, {
       excludeExtraneousValues: true,
     });
@@ -98,22 +120,21 @@ export class OrdersController {
   @ApiOperation({ summary: 'Cancel order' })
   @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiHeader({
-    name: 'X-Trace-Id',
-    description: 'Unique request trace identifier for distributed tracing.',
-    required: false,
+    name: 'Idempotency-Key',
+    description: 'Required for idempotent cancel.',
+    required: true,
   })
   @ApiOkResponse({ description: 'Order canceled', type: OrderResponseDto })
   async cancel(
     @Param('id') id: string,
-    @Headers('x-trace-id') traceIdLower?: string,
-    @Headers('trace-id') traceIdAltLower?: string,
-    @Headers('X-Trace-Id') traceId?: string,
-    @Headers('Trace-Id') traceIdAlt?: string,
+    @Headers() rawHeaders: Record<string, string | string[] | undefined>,
   ): Promise<OrderResponseDto> {
-    const traceIdValue =
-      traceIdLower || traceIdAltLower || traceId || traceIdAlt;
-    console.log(`[cancel] traceId=${traceIdValue ?? '(none)'}`);
-    const order = await this.ordersService.cancel(id, traceIdValue);
+    const headers = normalizeHeaders(rawHeaders);
+    const idemKey = headers['idempotency-key'];
+    if (!idemKey) throw new BadRequestException('Missing Idempotency-Key');
+
+    const traceId = readTraceId(headers);
+    const order = await this.ordersService.cancel(id, idemKey, traceId);
     return plainToInstance(OrderResponseDto, order, {
       excludeExtraneousValues: true,
     });

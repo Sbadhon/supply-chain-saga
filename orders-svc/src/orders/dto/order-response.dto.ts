@@ -1,13 +1,13 @@
 import { Expose, Transform, Type } from 'class-transformer';
 
 class OrderItemResponseDto {
-  @Expose() 
+  @Expose()
   sku!: string;
 
-  @Expose() 
+  @Expose()
   supplierId?: string;
 
-  @Expose() 
+  @Expose()
   quantity!: number;
 
   @Expose()
@@ -21,29 +21,29 @@ class OrderItemResponseDto {
 }
 
 export class OrderResponseDto {
-  @Expose() 
+  @Expose()
   id!: string;
 
-  @Expose() 
+  @Expose()
   customerId?: string | null;
 
-  @Expose() 
+  @Expose()
   status!: string;
 
-  // @Expose() 
+  // @Expose()
   // idempotencyKey!: string;
 
-  @Expose() 
+  @Expose()
   metadata?: Record<string, any>;
 
   @Expose()
   @Type(() => OrderItemResponseDto)
   items!: OrderItemResponseDto[];
 
-  @Expose() 
+  @Expose()
   createdAt!: Date;
 
-  @Expose() 
+  @Expose()
   updatedAt!: Date;
 
   @Expose()
@@ -54,7 +54,8 @@ export class OrderResponseDto {
   @Expose()
   get total(): number {
     return (this.items ?? []).reduce(
-      (sum, item: any) => sum + Number(item.quantity) * Number(item.unitPrice),
+      (sum, item: OrderItemResponseDto) =>
+        sum + Number(item.quantity) * Number(item.unitPrice),
       0,
     );
   }

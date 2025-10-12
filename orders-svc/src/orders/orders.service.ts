@@ -16,15 +16,21 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private readonly repo: Repository<Order>,
-
     private readonly outbox: OutboxService,
-
     @InjectDataSource()
     private readonly ds: DataSource,
   ) {}
 
-  //  Creates a new order with items
-  // or returns the existing one if the idempotency key is reused.
+  private computeTotal(
+    items: Pick<OrderItem, 'quantity' | 'unitPrice'>[] = [],
+  ): number {
+    return items.reduce(
+      (sum, it) => sum + (Number(it.unitPrice) || 0) * (it.quantity || 0),
+      0,
+    );
+  }
+
+  // Creates a new order with items (idempotent by idempotencyKey)
   async create(
     dto: CreateOrderDto,
     idempotencyKey?: string,
@@ -63,6 +69,7 @@ export class OrdersService {
           }),
         );
         await itemRepo.save(items);
+
         await this.outbox.enqueue(trx, {
           aggregateType: 'Order',
           aggregateId: saved.id,
@@ -76,14 +83,16 @@ export class OrdersService {
               unitPrice: i.unitPrice,
             })),
             customerId: saved.customerId ?? null,
+            total: this.computeTotal(items),
           },
           headers: { traceId, idempotencyKey },
-          idempotencyKey,
+          idempotencyKey, // base key is fine (single row)
         });
+
         return await orderRepo.findOne({
           where: { id: saved.id },
           relations: ['items'],
-        }); // hydrate
+        });
       });
     } catch (err) {
       if (
@@ -115,11 +124,15 @@ export class OrdersService {
     }
   }
 
+  // Approve: request inventory reserve + payment charge (idempotent by idempotencyKey)
   async approve(
     id: string,
     idempotencyKey?: string,
     traceId?: string,
   ): Promise<Order | null> {
+    if (!idempotencyKey)
+      throw new BadRequestException('Missing Idempotency-Key header');
+
     try {
       return await this.ds.transaction(async (trx) => {
         const orderRepo = trx.getRepository(Order);
@@ -136,27 +149,47 @@ export class OrdersService {
           throw new BadRequestException(`Cannot approve from ${order.status}`);
         }
 
-        order.status = OrderStatusEnum.PAID;
-        await orderRepo.save(order);
+        // Move to RESERVED when approve is initiated
+        if (order.status === OrderStatusEnum.PENDING) {
+          order.status = OrderStatusEnum.RESERVED;
+          await orderRepo.save(order);
+        }
 
+        const total = this.computeTotal(order.items ?? []);
+        const baseKey = idempotencyKey;
+
+        // Inventory reservations — one message per SKU, each with a unique derived key
+        for (const it of order.items ?? []) {
+          await this.outbox.enqueue(trx, {
+            aggregateType: 'Order',
+            aggregateId: order.id,
+            type: 'InventoryReserveRequested',
+            payload: {
+              orderId: order.id,
+              sku: it.sku,
+              quantity: it.quantity,
+            },
+            headers: { traceId, idempotencyKey: baseKey },
+            idempotencyKey: `${baseKey}:inv:${it.sku}`,
+          });
+        }
+
+        // Payment charge — unique derived key
         await this.outbox.enqueue(trx, {
           aggregateType: 'Order',
           aggregateId: order.id,
-          type: 'OrderPaid', // named OrderPaid to reflect final state
+          type: 'PaymentChargeRequested',
           payload: {
-            id: order.id,
-            status: order.status,
-            items: order.items?.map((i) => ({
-              sku: i.sku,
-              quantity: i.quantity,
-              unitPrice: i.unitPrice,
-            })),
+            orderId: order.id,
+            amount: total,
+            currency: 'USD',
             customerId: order.customerId ?? null,
           },
-          headers: { traceId, idempotencyKey },
-          idempotencyKey,
+          headers: { traceId, idempotencyKey: baseKey },
+          idempotencyKey: `${baseKey}:pay`,
         });
 
+        // Return fresh
         return await orderRepo.findOne({ where: { id }, relations: ['items'] });
       });
     } catch (err) {
@@ -169,24 +202,74 @@ export class OrdersService {
     }
   }
 
+  // Cancel: mark canceled and request compensation (release/refund)
   async cancel(
     id: string,
     idempotencyKey?: string,
     traceId?: string,
   ): Promise<Order | null> {
+    if (!idempotencyKey)
+      throw new BadRequestException('Missing Idempotency-Key header');
+
     try {
       return await this.ds.transaction(async (trx) => {
         const orderRepo = trx.getRepository(Order);
+
         const order = await orderRepo.findOne({
           where: { id },
           relations: ['items'],
         });
         if (!order) throw new NotFoundException('Order not found');
 
+        // If already final, short-circuit (idempotent)
+        if (order.status === OrderStatusEnum.CANCELED) {
+          return order;
+        }
+        if (order.status === OrderStatusEnum.SHIPPED) {
+          throw new BadRequestException('Cannot cancel a shipped order');
+        }
+
+        const baseKey = idempotencyKey;
+
+        // Compensation intents based on current status
+        if (
+          order.status === OrderStatusEnum.RESERVED ||
+          order.status === OrderStatusEnum.PENDING
+        ) {
+          for (const it of order.items ?? []) {
+            await this.outbox.enqueue(trx, {
+              aggregateType: 'Order',
+              aggregateId: order.id,
+              type: 'InventoryReleaseRequested',
+              payload: {
+                orderId: order.id,
+                sku: it.sku,
+                quantity: it.quantity,
+              },
+              headers: { traceId, idempotencyKey: baseKey },
+              idempotencyKey: `${baseKey}:invrel:${it.sku}`,
+            });
+          }
+        }
+
+        if (order.status === OrderStatusEnum.PAID) {
+          const total = this.computeTotal(order.items ?? []);
+          await this.outbox.enqueue(trx, {
+            aggregateType: 'Order',
+            aggregateId: order.id,
+            type: 'PaymentRefundRequested',
+            payload: { orderId: order.id, amount: total, currency: 'USD' },
+            headers: { traceId, idempotencyKey: baseKey },
+            idempotencyKey: `${baseKey}:refund`,
+          });
+        }
+
+        // Persist final state
         order.status = OrderStatusEnum.CANCELED;
         order.updatedAt = new Date();
         await orderRepo.save(order);
 
+        // Canonical event for projections
         await this.outbox.enqueue(trx, {
           aggregateType: 'Order',
           aggregateId: order.id,
@@ -201,8 +284,8 @@ export class OrdersService {
             })),
             customerId: order.customerId ?? null,
           },
-          headers: { traceId, idempotencyKey },
-          idempotencyKey,
+          headers: { traceId, idempotencyKey: baseKey },
+          idempotencyKey: `${baseKey}:ordercanceled`,
         });
 
         return await orderRepo.findOne({ where: { id }, relations: ['items'] });

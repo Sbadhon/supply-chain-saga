@@ -35,7 +35,10 @@ export class PaymentsController {
     description: 'Uniquely identifies this create request for idempotency.',
     required: false,
   })
-  @ApiCreatedResponse({ description: 'Payment created', type: PaymentResponseDto })
+  @ApiCreatedResponse({
+    description: 'Payment created',
+    type: PaymentResponseDto,
+  })
   async create(
     @Body() dto: CreatePaymentDto,
     @Headers('idempotency-key') idemKeyLower?: string,
@@ -104,11 +107,17 @@ export class PaymentsController {
         currency: payment.currency,
         status: payment.status,
         authorizedAmount:
-          payment.authorizedAmount != null ? Number(payment.authorizedAmount) : null,
+          payment.authorizedAmount != null
+            ? Number(payment.authorizedAmount)
+            : null,
         capturedAmount:
-          payment.capturedAmount != null ? Number(payment.capturedAmount) : null,
+          payment.capturedAmount != null
+            ? Number(payment.capturedAmount)
+            : null,
         refundedAmount:
-          payment.refundedAmount != null ? Number(payment.refundedAmount) : null,
+          payment.refundedAmount != null
+            ? Number(payment.refundedAmount)
+            : null,
         methodSummary: payment.methodSummary ?? null,
         provider: payment.provider ?? null,
         providerPaymentId: payment.providerPaymentId ?? null,

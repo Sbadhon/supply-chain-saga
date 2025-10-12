@@ -1,7 +1,11 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { TraceIdInterceptor } from './common/trace-id.interceptor';
@@ -26,7 +30,12 @@ async function bootstrap() {
   );
   http.enableCors({
     origin: ['http://localhost:4200'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Trace-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'X-Trace-Id',
+    ],
     exposedHeaders: ['X-Trace-Id'],
     credentials: true,
   });
@@ -58,7 +67,21 @@ async function bootstrap() {
   await http.listen(port);
 
   console.log(`orders-svc HTTP listening on :${port}`);
-  console.log(`orders-svc NATS connected → ${process.env.NATS_URL || 'nats://localhost:4222'}`);
+  console.log(
+    `orders-svc NATS connected → ${process.env.NATS_URL || 'nats://localhost:4222'}`,
+  );
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : String(err);
+  Logger.error(
+    `[app] bootstrap error: ${message}`,
+    err instanceof Error ? err.stack : undefined,
+    'Bootstrap',
+  );
+});
