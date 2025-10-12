@@ -1,15 +1,18 @@
 import { Controller, Get, HttpCode } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as os from 'os';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('health')
 @Controller('v1/health')
 export class HealthController {
-  private readonly service = process.env.SERVICE_NAME || 'payments-svc';
-
+  private readonly service = process.env.SERVICE_NAME || 'nest-svc';
   constructor(private readonly ds: DataSource) {}
 
   @Get('live')
   @HttpCode(200)
+  @ApiOperation({ summary: 'Liveness' })
+  @ApiOkResponse({ description: 'Process is up' })
   live() {
     return {
       status: 'UP',
@@ -22,6 +25,8 @@ export class HealthController {
   }
 
   @Get('ready')
+  @ApiOperation({ summary: 'Readiness (DB check)' })
+  @ApiOkResponse({ description: 'Service readiness with DB status' })
   async ready() {
     try {
       await this.ds.query('SELECT 1');
@@ -42,6 +47,8 @@ export class HealthController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Verbose health' })
+  @ApiOkResponse({ description: 'Aggregated health info' })
   async full() {
     let dbOk = true,
       dbErr: string | undefined;

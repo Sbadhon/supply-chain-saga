@@ -16,7 +16,7 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private readonly repo: Repository<Order>,
-   
+
     private readonly outbox: OutboxService,
 
     @InjectDataSource()
@@ -28,7 +28,7 @@ export class OrdersService {
   async create(
     dto: CreateOrderDto,
     idempotencyKey?: string,
-    traceId?: string
+    traceId?: string,
   ): Promise<Order | null> {
     if (!idempotencyKey) {
       throw new BadRequestException('Missing Idempotency-Key header');
@@ -59,7 +59,7 @@ export class OrdersService {
             sku: item.sku,
             quantity: item.quantity,
             unitPrice: Number(item.unitPrice),
-            supplierId: item.supplierId ?? null
+            supplierId: item.supplierId ?? null,
           }),
         );
         await itemRepo.save(items);
@@ -70,16 +70,27 @@ export class OrdersService {
           payload: {
             id: saved.id,
             status: saved.status,
-            items: items.map(i => ({ sku: i.sku, quantity: i.quantity, unitPrice: i.unitPrice })),
+            items: items.map((i) => ({
+              sku: i.sku,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
             customerId: saved.customerId ?? null,
           },
           headers: { traceId, idempotencyKey },
           idempotencyKey,
         });
-        return await orderRepo.findOne({ where: { id: saved.id }, relations: ['items'] }); // hydrate
+        return await orderRepo.findOne({
+          where: { id: saved.id },
+          relations: ['items'],
+        }); // hydrate
       });
-    }  catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException) throw err;
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      )
+        throw err;
       throw new InternalServerErrorException('Could not create order');
     }
   }
@@ -87,33 +98,47 @@ export class OrdersService {
   async getAll(): Promise<Order[]> {
     return this.repo.find({ relations: ['items'] });
   }
-  
+
   async getById(id: string): Promise<Order | null> {
     try {
       return await this.repo.findOne({
         where: { id },
         relations: ['items'],
       });
-    }  catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException) throw err;
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      )
+        throw err;
       throw new InternalServerErrorException('Could not find order');
     }
   }
 
-  async approve(id: string, idempotencyKey?: string, traceId?: string): Promise<Order | null> {
+  async approve(
+    id: string,
+    idempotencyKey?: string,
+    traceId?: string,
+  ): Promise<Order | null> {
     try {
       return await this.ds.transaction(async (trx) => {
         const orderRepo = trx.getRepository(Order);
-        const order = await orderRepo.findOne({ where: { id }, relations: ['items'] });
+        const order = await orderRepo.findOne({
+          where: { id },
+          relations: ['items'],
+        });
         if (!order) throw new NotFoundException('Order not found');
-  
-        if (order.status !== OrderStatusEnum.PENDING && order.status !== OrderStatusEnum.RESERVED) {
+
+        if (
+          order.status !== OrderStatusEnum.PENDING &&
+          order.status !== OrderStatusEnum.RESERVED
+        ) {
           throw new BadRequestException(`Cannot approve from ${order.status}`);
         }
-  
+
         order.status = OrderStatusEnum.PAID;
         await orderRepo.save(order);
-  
+
         await this.outbox.enqueue(trx, {
           aggregateType: 'Order',
           aggregateId: order.id,
@@ -121,32 +146,47 @@ export class OrdersService {
           payload: {
             id: order.id,
             status: order.status,
-            items: order.items?.map(i => ({ sku: i.sku, quantity: i.quantity, unitPrice: i.unitPrice })),
+            items: order.items?.map((i) => ({
+              sku: i.sku,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
             customerId: order.customerId ?? null,
           },
           headers: { traceId, idempotencyKey },
           idempotencyKey,
         });
-  
+
         return await orderRepo.findOne({ where: { id }, relations: ['items'] });
       });
     } catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException) throw err;
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      )
+        throw err;
       throw new InternalServerErrorException('Could not approve order');
     }
   }
-  
-  async cancel(id: string, idempotencyKey?: string, traceId?: string): Promise<Order | null> {
+
+  async cancel(
+    id: string,
+    idempotencyKey?: string,
+    traceId?: string,
+  ): Promise<Order | null> {
     try {
       return await this.ds.transaction(async (trx) => {
         const orderRepo = trx.getRepository(Order);
-        const order = await orderRepo.findOne({ where: { id }, relations: ['items'] });
+        const order = await orderRepo.findOne({
+          where: { id },
+          relations: ['items'],
+        });
         if (!order) throw new NotFoundException('Order not found');
-  
+
         order.status = OrderStatusEnum.CANCELED;
         order.updatedAt = new Date();
         await orderRepo.save(order);
-  
+
         await this.outbox.enqueue(trx, {
           aggregateType: 'Order',
           aggregateId: order.id,
@@ -154,17 +194,25 @@ export class OrdersService {
           payload: {
             id: order.id,
             status: order.status,
-            items: order.items?.map(i => ({ sku: i.sku, quantity: i.quantity, unitPrice: i.unitPrice })),
+            items: order.items?.map((i) => ({
+              sku: i.sku,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
             customerId: order.customerId ?? null,
           },
           headers: { traceId, idempotencyKey },
           idempotencyKey,
         });
-  
+
         return await orderRepo.findOne({ where: { id }, relations: ['items'] });
       });
     } catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException) throw err;
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      )
+        throw err;
       throw new InternalServerErrorException('Could not cancel order');
     }
   }

@@ -1,31 +1,67 @@
+import {
+  IsNumber,
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsIn,
+  IsPositive,
+  Matches,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import { IsNumber, IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
+const PaymentStatuses = [
+  'NEW',
+  'PROCESSING',
+  'REQUIRES_ACTION',
+  'AUTHORIZED',
+  'CAPTURED',
+  'DECLINED',
+  'FAILED',
+  'VOIDED',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
+  'DISPUTED',
+  'CANCELED',
+] as const;
 
 export class CreatePaymentDto {
-  @IsString() @IsNotEmpty()
+  @ApiProperty({ description: 'Associated order ID' })
+  @IsString()
+  @IsNotEmpty()
   orderId!: string;
 
+  @ApiProperty({ description: 'Amount in major currency units (e.g., 12.34)' })
   @IsNumber()
+  @IsPositive()
   amount!: number;
 
-  @IsString() @IsNotEmpty()
+  @ApiProperty({ description: 'ISO 4217 currency code, e.g. USD, EUR' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter ISO code' })
   currency!: string;
 
-  @IsOptional() @IsString()
+  @ApiPropertyOptional({ description: 'Short description of payment method' })
+  @IsOptional()
+  @IsString()
   methodSummary?: string;
 
-  @IsOptional() 
+  @ApiPropertyOptional({ description: 'Payment provider name (e.g., Stripe)' })
+  @IsOptional()
   @IsString()
   provider?: string;
 
-  @IsOptional() @IsString()
+  @ApiPropertyOptional({ description: 'Provider payment id/reference' })
+  @IsOptional()
+  @IsString()
   providerPaymentId?: string;
 
-  @IsOptional() 
-  @IsString() 
-  @IsIn([
-    'NEW','PROCESSING','REQUIRES_ACTION','AUTHORIZED','CAPTURED',
-    'DECLINED','FAILED','VOIDED','REFUNDED','PARTIALLY_REFUNDED','DISPUTED','CANCELED'
-  ])
+  @ApiPropertyOptional({
+    enum: PaymentStatuses,
+    description: 'Optional initial status (defaults to NEW in service)',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn([...PaymentStatuses])
   status?: string;
 }

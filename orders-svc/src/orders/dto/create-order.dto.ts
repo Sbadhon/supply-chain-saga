@@ -5,33 +5,50 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumberString,
+  IsObject,
   IsOptional,
   IsString,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-class ItemDto {
-  @IsString() 
-  @IsNotEmpty() 
+export class ItemDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
   sku: string;
 
-  @IsString() 
-  @IsOptional() 
-  supplierId: string;
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  supplierId?: string;
 
-  @IsInt() 
-  @Min(1) quantity: number;
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  quantity: number;
 
-  @IsNumberString() 
+  @ApiProperty()
+  @IsNumberString()
   unitPrice: string;
 }
+
 export class CreateOrderDto {
-  @IsString() @IsOptional() customerId?: string;
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  customerId?: string;
+
+  @ApiProperty({ type: [ItemDto] })
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => ItemDto)
   items: ItemDto[];
-  @IsOptional() metadata?: Record<string, any>;
+
+  @ApiPropertyOptional({ type: Object })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
 }
