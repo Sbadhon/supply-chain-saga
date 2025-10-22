@@ -43,6 +43,25 @@ docker-compose up -d postgres nats
 # start service
 npm run start:dev
 
+
+```mermaid
+stateDiagram-v2
+  [*] --> NEW
+  NEW --> AUTHORIZED : AUTHORIZE
+  NEW --> CANCELED : CANCEL
+
+  AUTHORIZED --> CAPTURED : CAPTURE
+  AUTHORIZED --> VOIDED : VOID
+
+  CAPTURED --> CANCELED : REFUND
+
+  AUTHORIZED --> [*]
+  CAPTURED --> [*]
+  CANCELED --> [*]
+  VOIDED --> [*]
+
+```
+
 Example:
 curl -X POST http://localhost:3002/v1/payments \
   -H "Content-Type: application/json" \

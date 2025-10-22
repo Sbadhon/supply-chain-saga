@@ -3,24 +3,34 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   NotFoundException,
   Param,
   Post,
-  HttpCode,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { PaymentsService } from './payments.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { PaymentResponseDto } from './dto/response-payment.dto';
-import { Payment } from './entities/payment.entity';
 import {
   ApiCreatedResponse,
+  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiHeader,
 } from '@nestjs/swagger';
+
+import { PaymentsService } from './payments.service';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PaymentResponseDto } from './dto/response-payment.dto';
+import { Payment } from './entities/payment.entity';
+import { TransitionPaymentDto } from './dto/transition-payment.dto';
+
+type HeaderValue = string | string[] | undefined;
+type HeaderBag = Record<string, HeaderValue>;
+
+function readHeader(headers: HeaderBag, name: string): string | undefined {
+  const v = headers[name];
+  return Array.isArray(v) ? v[0] : v;
+}
 
 @ApiTags('payments')
 @Controller('v1/payments')
@@ -32,7 +42,13 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Create a payment' })
   @ApiHeader({
     name: 'Idempotency-Key',
-    description: 'Uniquely identifies this create request for idempotency.',
+    description:
+      'Idempotency key for safely retrying requests (alias: X-Idempotency-Key)',
+    required: true,
+  })
+  @ApiHeader({
+    name: 'X-Trace-Id',
+    description: 'Optional trace identifier for distributed tracing',
     required: false,
   })
   @ApiCreatedResponse({
@@ -41,13 +57,25 @@ export class PaymentsController {
   })
   async create(
     @Body() dto: CreatePaymentDto,
-    @Headers('idempotency-key') idemKeyLower?: string,
-    @Headers('x-idempotency-key') idemKeyXLower?: string,
-    @Headers('Idempotency-Key') idemKey?: string,
-    @Headers('X-Idempotency-Key') idemKeyX?: string,
+    @Headers() headers: HeaderBag,
   ): Promise<PaymentResponseDto> {
-    const key = idemKeyLower || idemKeyXLower || idemKey || idemKeyX;
-    const payment = await this.paymentsService.create(dto, key);
+    const idempotencyKey =
+      readHeader(headers, 'idempotency-key') ??
+      readHeader(headers, 'x-idempotency-key') ??
+      '';
+    const traceId =
+      readHeader(headers, 'x-trace-id') ?? readHeader(headers, 'traceparent');
+
+    const sanitized: CreatePaymentDto = {
+      ...dto,
+      amount: typeof dto.amount === 'string' ? Number(dto.amount) : dto.amount,
+    };
+
+    const payment = await this.paymentsService.create(
+      sanitized,
+      idempotencyKey,
+      traceId,
+    );
     return this.toResponse(payment);
   }
 
@@ -60,7 +88,7 @@ export class PaymentsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get payment by id' })
+  @ApiOperation({ summary: 'Get payment by ID' })
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiOkResponse({ description: 'Selected payment', type: PaymentResponseDto })
   async getById(@Param('id') id: string): Promise<PaymentResponseDto> {
@@ -83,8 +111,9 @@ export class PaymentsController {
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiOkResponse({ description: 'Payment retried', type: PaymentResponseDto })
   async retry(@Param('id') id: string): Promise<PaymentResponseDto> {
-    const p = await this.paymentsService.retry(id);
-    return this.toResponse(p);
+    const payment: Payment = await this.paymentsService.retry(id);
+    if (!payment) throw new NotFoundException('Payment retry failed');
+    return this.toResponse(payment);
   }
 
   @Post(':id/void')
@@ -93,8 +122,34 @@ export class PaymentsController {
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiOkResponse({ description: 'Payment voided', type: PaymentResponseDto })
   async voidAuth(@Param('id') id: string): Promise<PaymentResponseDto> {
-    const p = await this.paymentsService.void(id);
-    return this.toResponse(p);
+    const payment: Payment = await this.paymentsService.void(id);
+    return this.toResponse(payment);
+  }
+
+  @Post(':id/transition')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Transition payment (unified endpoint)' })
+  @ApiParam({ name: 'id', description: 'Payment ID' })
+  @ApiOkResponse({ description: 'Payment updated', type: PaymentResponseDto })
+  async transition(
+    @Param('id') id: string,
+    @Body() dto: TransitionPaymentDto,
+    @Headers() headers: HeaderBag,
+  ): Promise<PaymentResponseDto> {
+    const idempotencyKey =
+      readHeader(headers, 'idempotency-key') ??
+      readHeader(headers, 'x-idempotency-key') ??
+      '';
+    const traceId =
+      readHeader(headers, 'x-trace-id') ?? readHeader(headers, 'traceparent');
+
+    const payment = await this.paymentsService.transition(
+      id,
+      dto,
+      idempotencyKey,
+      traceId,
+    );
+    return this.toResponse(payment);
   }
 
   private toResponse(payment: Payment): PaymentResponseDto {
@@ -106,18 +161,9 @@ export class PaymentsController {
         amount: Number(payment.amount),
         currency: payment.currency,
         status: payment.status,
-        authorizedAmount:
-          payment.authorizedAmount != null
-            ? Number(payment.authorizedAmount)
-            : null,
-        capturedAmount:
-          payment.capturedAmount != null
-            ? Number(payment.capturedAmount)
-            : null,
-        refundedAmount:
-          payment.refundedAmount != null
-            ? Number(payment.refundedAmount)
-            : null,
+        authorizedAmount: payment.authorizedAmount ?? null,
+        capturedAmount: payment.capturedAmount ?? null,
+        refundedAmount: payment.refundedAmount ?? null,
         methodSummary: payment.methodSummary ?? null,
         provider: payment.provider ?? null,
         providerPaymentId: payment.providerPaymentId ?? null,

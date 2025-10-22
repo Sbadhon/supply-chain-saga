@@ -131,4 +131,40 @@ export class OutboxService {
       [id, status, next],
     );
   }
+  /**
+   * Convenience helper to record a payment-related event
+   * without requiring a full transaction context.
+   * This is used by PaymentsService.retry(), void(), etc.
+   */
+  async addPaymentEvent(params: {
+    paymentId: string;
+    type: string;
+    message?: string;
+    traceId?: string;
+    idempotencyKey?: string;
+  }): Promise<void> {
+    const { paymentId, type, message, traceId, idempotencyKey } = params;
+
+    const repo = this.ds.getRepository(OutboxEvent);
+    const event = repo.create({
+      aggregateType: 'Payment',
+      aggregateId: paymentId,
+      type,
+      payload: {
+        paymentId,
+        message: message ?? '',
+      },
+      headers: {
+        ...(traceId ? { traceId } : {}),
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+      },
+      status: 'PENDING',
+      attempts: 0,
+      nextAttemptAt: new Date(),
+    });
+
+    await repo.save(event);
+
+    this.logger.debug(`Queued payment event ${type} for ${paymentId}`);
+  }
 }
